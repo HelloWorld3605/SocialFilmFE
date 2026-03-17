@@ -6,6 +6,7 @@ import {
   ClockIcon,
   MaximizeIcon,
   UserIcon,
+  ChevronDownIcon,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -37,7 +38,7 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 h-[48px] z-40 flex items-center px-4 pl-[212px] transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 h-[60px] pt-3 z-40 flex items-center px-4 pl-[212px] transition-all duration-300 ${
         isScrolled
           ? "bg-[#101010]/95 backdrop-blur-md border-b border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
           : "bg-transparent border-b border-transparent"
@@ -47,33 +48,88 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
       <div className="flex-1" />
 
       {/* Search Bar - centered absolute */}
-      <div className="absolute left-1/2 -translate-x-1/2">
+      <div
+        id="search"
+        className="absolute left-0 top-1/2 -translate-y-1/2 block h-[44.8px] w-[368px] max-w-[368px] text-[14px] leading-[22.4px] text-[#aaaaaa]"
+        style={{
+          boxSizing: "border-box",
+          fontFamily:
+            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+          WebkitTapHighlightColor: "rgba(0, 0, 0, 0)",
+        }}
+      >
         <form
-          className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 w-[320px] border border-white/10"
+          className="search-elements flex h-full items-center rounded-lg bg-white/10 px-4 backdrop-blur-sm"
+          action="/"
+          method="GET"
+          id="form-filter"
+          autoComplete="off"
           onSubmit={handleSubmit}
         >
-          <input
-            type="text"
-            placeholder="Tìm kiếm"
-            className="bg-transparent border-none outline-none text-sm text-white placeholder-white/40 flex-1 w-full"
-            aria-label="Tìm kiếm video"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-
-          <button
-            type="submit"
-            className="bg-transparent border-none cursor-pointer p-0 ml-2 text-white/50 hover:text-white transition-colors"
-            aria-label="Tìm kiếm"
-            disabled={isSearching}
+          <div
+            className="search-icon mr-2.5 flex shrink-0 items-center text-white"
+            style={{ marginTop: "-2px" }}
           >
             <SearchIcon size={16} />
-          </button>
+          </div>
+          <input
+            id="main-search"
+            className="search-input h-full w-full border-none bg-transparent text-[14px] font-normal leading-[22.4px] text-white outline-none placeholder:font-normal placeholder:text-white"
+            placeholder="Tìm kiếm phim, diễn viên"
+            autoComplete="off"
+            type="text"
+            name="s"
+            aria-label="Tìm kiếm phim, diễn viên"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            disabled={isSearching}
+          />
         </form>
       </div>
 
+      <nav className="absolute left-[392px] top-1/2 hidden -translate-y-1/2 items-center gap-5 text-sm font-normal text-white/90 xl:flex">
+        <button
+          type="button"
+          className="font-normal transition-colors hover:text-white"
+        >
+          Phim Lẻ
+        </button>
+        <button
+          type="button"
+          className="font-normal transition-colors hover:text-white"
+        >
+          Phim Bộ
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 font-normal transition-colors hover:text-white"
+        >
+          Thể Loại
+          <ChevronDownIcon size={14} />
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 font-normal transition-colors hover:text-white"
+        >
+          Quốc Gia
+          <ChevronDownIcon size={14} />
+        </button>
+        <button
+          type="button"
+          className="font-normal transition-colors hover:text-white"
+        >
+          TV Shows
+        </button>
+        <button
+          type="button"
+          className="font-normal transition-colors hover:text-white"
+        >
+          Phim Chiếu Rạp
+        </button>
+      </nav>
+
       {/* Right side actions */}
-      <div className="flex-1 flex items-center justify-end gap-3">
+      <div className="flex-1 flex items-center justify-end gap-3 -translate-y-1.5">
         {/* VIP Button */}
         <button className="flex items-center gap-1 bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-medium px-3 py-1 rounded-full border-none cursor-pointer hover:from-amber-500 hover:to-amber-400 transition-all">
           <CrownIcon size={12} />

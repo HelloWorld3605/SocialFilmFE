@@ -316,7 +316,7 @@ const HeroSection = () => {
                   movieCardRefs.current[index] = el;
                 }}
                 onClick={() => setActiveMovieByIndex(index)}
-                className={`relative flex-none w-[100px] md:w-[120px] aspect-[2/3] rounded-lg overflow-hidden cursor-pointer snap-start transition-all duration-300 transform-gpu ${index === 0 ? "origin-left" : "origin-center"} ${activeIndex === index ? "ring-2 ring-inset ring-primary scale-[1.15] z-10 mx-3 shadow-xl" : "hover:scale-105"}`}
+                className={`relative flex-none w-[100px] md:w-[120px] aspect-[2/3] rounded-lg overflow-hidden cursor-pointer snap-start transition-all duration-300 transform-gpu ${index === 0 ? "origin-left" : "origin-center"} ${activeIndex === index ? "scale-[1.15] z-10 mx-3 shadow-xl" : "hover:scale-105"}`}
               >
                 <img
                   src={movie.poster_url}
