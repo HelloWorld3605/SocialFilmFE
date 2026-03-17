@@ -1,4 +1,4 @@
-import { Search, Bell, Home, Download, Monitor, Heart } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
@@ -37,14 +37,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Side icons - desktop only */}
-      <div className="hidden lg:flex fixed left-4 top-1/2 -translate-y-1/2 flex-col gap-5 z-50">
-        {[Home, Download, Monitor, Heart].map((Icon, i) => (
-          <button key={i} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-            <Icon className="w-5 h-5" />
-          </button>
-        ))}
-      </div>
     </nav>
   );
 };
