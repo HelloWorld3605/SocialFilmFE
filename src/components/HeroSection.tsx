@@ -270,17 +270,17 @@ const HeroSection = () => {
         <div className="flex items-center gap-4">
           <button className="flex items-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground rounded-sm font-semibold text-base hover:scale-105 transition-transform shadow-lg">
             <Play className="w-5 h-5 fill-current" />
-            Watch Now
+            Xem ngay
           </button>
           <button className="flex items-center gap-2 px-8 py-3.5 bg-foreground/20 backdrop-blur-md border tracking-wide border-foreground/30 text-foreground rounded-sm font-medium text-base hover:bg-foreground/30 transition-colors shadow-lg">
             <Info className="w-5 h-5" />
-            Detail
+            Chi tiết
           </button>
         </div>
       </div>
 
       {/* Popular Movies Carousel overlaying the bottom right of hero banner */}
-      <div className="absolute right-0 md:right-8 lg:right-16 bottom-8 z-20 w-full md:w-[70%] lg:w-[60%] xl:w-[50%]">
+      <div className="absolute right-0 md:right-8 lg:right-16 bottom-2 z-20 w-full md:w-[70%] lg:w-[60%] xl:w-[50%]">
         {/* Container cha: Loại bỏ hẳn overflow-hidden để không bị cắt */}
         <div className="w-full relative">
           <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 -left-5 -right-5 lg:-left-12 lg:-right-12 z-30 hidden md:flex items-center justify-between">

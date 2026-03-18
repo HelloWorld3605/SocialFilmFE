@@ -43,14 +43,42 @@ const Footer = () => {
 
           <div className="flex flex-wrap items-center justify-start gap-3">
             {[
-              { href: "https://t.me/congdongrophim", title: "Telegram", img: "telegram-icon.svg" },
-              { href: "https://discord.gg/rophim", title: "Discord", img: "discord-icon.svg" },
+              {
+                href: "https://t.me/congdongrophim",
+                title: "Telegram",
+                img: "telegram-icon.svg",
+              },
+              {
+                href: "https://discord.gg/rophim",
+                title: "Discord",
+                img: "discord-icon.svg",
+              },
               { href: "https://x.com/rophimtv", title: "X", img: "x-icon.svg" },
-              { href: "https://www.facebook.com/rogiaitri", title: "Facebook", img: "facebook-icon.svg" },
-              { href: "https://www.tiktok.com/@rophimtv", title: "Tiktok", img: "tiktok-icon.svg" },
-              { href: "https://www.youtube.com/@rophimcom", title: "Youtube", img: "youtube-icon.svg" },
-              { href: "https://www.threads.net/@rophimtv", title: "Threads", img: "threads-icon.svg" },
-              { href: "https://www.instagram.com/rophimtv", title: "Instagram", img: "instagram-icon.svg" },
+              {
+                href: "https://www.facebook.com/rogiaitri",
+                title: "Facebook",
+                img: "facebook-icon.svg",
+              },
+              {
+                href: "https://www.tiktok.com/@rophimtv",
+                title: "Tiktok",
+                img: "tiktok-icon.svg",
+              },
+              {
+                href: "https://www.youtube.com/@rophimcom",
+                title: "Youtube",
+                img: "youtube-icon.svg",
+              },
+              {
+                href: "https://www.threads.net/@rophimtv",
+                title: "Threads",
+                img: "threads-icon.svg",
+              },
+              {
+                href: "https://www.instagram.com/rophimtv",
+                title: "Instagram",
+                img: "instagram-icon.svg",
+              },
             ].map((social) => (
               <a
                 key={social.title}
@@ -76,26 +104,60 @@ const Footer = () => {
 
         {/* Links Menu */}
         <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-3 text-sm font-medium text-white/70 w-full">
-          <a title="Hỏi-Đáp" href="#" className="hover:text-white hover:underline underline-offset-4 transition-all">Hỏi-Đáp</a>
+          <a
+            title="Hỏi-Đáp"
+            href="#"
+            className="hover:text-white hover:underline underline-offset-4 transition-all"
+          >
+            Hỏi-Đáp
+          </a>
           <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a title="Chính sách bảo mật" href="#" className="hover:text-white hover:underline underline-offset-4 transition-all">Chính sách bảo mật</a>
+          <a
+            title="Chính sách bảo mật"
+            href="#"
+            className="hover:text-white hover:underline underline-offset-4 transition-all"
+          >
+            Chính sách bảo mật
+          </a>
           <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a title="Điều khoản sử dụng" href="#" className="hover:text-white hover:underline underline-offset-4 transition-all">Điều khoản sử dụng</a>
+          <a
+            title="Điều khoản sử dụng"
+            href="#"
+            className="hover:text-white hover:underline underline-offset-4 transition-all"
+          >
+            Điều khoản sử dụng
+          </a>
           <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a title="Giới thiệu" href="#" className="hover:text-white hover:underline underline-offset-4 transition-all">Giới thiệu</a>
+          <a
+            title="Giới thiệu"
+            href="#"
+            className="hover:text-white hover:underline underline-offset-4 transition-all"
+          >
+            Giới thiệu
+          </a>
           <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a title="Liên hệ" href="#" className="hover:text-white hover:underline underline-offset-4 transition-all">Liên hệ</a>
+          <a
+            title="Liên hệ"
+            href="#"
+            className="hover:text-white hover:underline underline-offset-4 transition-all"
+          >
+            Liên hệ
+          </a>
         </div>
 
         {/* Notice / Description */}
         <div className="text-sm text-white/50 leading-relaxed max-w-5xl text-left w-full relative z-10">
-          RoPhim (Rổ Phim) - Phim hay cả rổ - trang xem phim online miễn phí Full HD Vietsub, thuyết minh + lồng tiếng. Kho phim mới khổng lồ, phim chiếu rạp, phim bộ, phim lẻ từ nhiều quốc gia như Việt Nam, Hàn Quốc, Trung Quốc, Thái Lan, Nhật Bản, Âu Mỹ… đa dạng thể loại. Khám phá nền tảng phim trực tuyến hay nhất 2025 chất lượng 4K!
+          RoPhim (Rổ Phim) - Phim hay cả rổ - trang xem phim online miễn phí
+          Full HD Vietsub, thuyết minh + lồng tiếng. Kho phim mới khổng lồ, phim
+          chiếu rạp, phim bộ, phim lẻ từ nhiều quốc gia như Việt Nam, Hàn Quốc,
+          Trung Quốc, Thái Lan, Nhật Bản, Âu Mỹ… đa dạng thể loại. Khám phá nền
+          tảng phim trực tuyến hay nhất 2025 chất lượng 4K!
         </div>
+      </div>
 
-        {/* Copyright */}
-        <div className="pt-4 border-t border-white/10 text-xs text-white/40 font-medium w-full text-left">
-          Copyright ©2025 Rophim
-        </div>
+      {/* Copyright - full width divider */}
+      <div className="-mx-6 md:-mx-16 mt-4 border-t border-white/10 px-6 md:px-16 pt-4 text-xs text-white/40 font-medium text-left relative z-10">
+        Copyright ©2025 Rophim
       </div>
     </footer>
   );

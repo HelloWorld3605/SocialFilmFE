@@ -163,61 +163,6 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
             <UserIcon size={14} />
             <span>Đăng nhập</span>
           </button>
-
-          <div className="absolute right-0 top-full pt-3 opacity-0 invisible translate-y-1 pointer-events-none transition-all duration-200 group-hover/login:opacity-100 group-hover/login:visible group-hover/login:translate-y-0 group-hover/login:pointer-events-auto group-focus-within/login:opacity-100 group-focus-within/login:visible group-focus-within/login:translate-y-0 group-focus-within/login:pointer-events-auto">
-            <div className="relative w-[460px] max-w-[calc(100vw-240px)] overflow-hidden rounded-[10px] border border-white/10 bg-[#2e313d]/95 shadow-[0_16px_36px_rgba(0,0,0,0.45)] backdrop-blur-md">
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    "linear-gradient(105deg, rgba(67,71,88,0.95) 0%, rgba(45,49,62,0.96) 58%, rgba(43,46,59,0.9) 100%)",
-                }}
-              />
-              <span className="absolute right-5 top-2 text-[58px] font-black leading-none tracking-tight text-white/[0.04] pointer-events-none">
-                VIP
-              </span>
-
-              <div className="relative z-10 flex items-center justify-between gap-4 px-3.5 py-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/10 text-white/75 flex items-center justify-center">
-                      <UserIcon size={22} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <h3 className="text-[23px] leading-none font-semibold tracking-tight text-white">
-                        Đăng nhập/Đăng ký{" "}
-                        <span className="text-white/90">&gt;</span>
-                      </h3>
-                      <p className="mt-2 text-[10px] leading-none text-white/55 truncate">
-                        Đồng bộ lịch sử xem, tận hưởng chất lượng cao
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <p className="text-[23px] leading-none font-bold tracking-tight text-[#ffba2a]">
-                      Mở gói hội viên
-                    </p>
-                    <p className="mt-1 text-[24px] leading-none tracking-tight text-white">
-                      Chỉ từ
-                      <span className="mx-1 font-semibold text-[#ff5336]">
-                        12
-                      </span>
-                      nghìn, xem cực đã
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="mt-10 shrink-0 rounded-md bg-[#f3cd7b] px-4 py-2 text-[17px] leading-none font-medium text-[#4f3a11] transition-colors hover:bg-[#f8d894]"
-                >
-                  Mở ngay
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </header>
