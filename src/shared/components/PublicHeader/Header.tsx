@@ -8,6 +8,11 @@ import {
   UserIcon,
   ChevronDownIcon,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 
 interface HeaderProps {
   onSearch?: (keyword: string) => void;
@@ -17,11 +22,34 @@ interface HeaderProps {
 export function Header({ onSearch, isSearching = false }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSearch?.(keyword.trim());
   };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,7 +68,7 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
     <header
       className={`fixed top-0 left-0 right-0 h-[60px] pt-3 z-40 flex items-center px-4 pl-[212px] transition-all duration-300 ${
         isScrolled
-          ? "bg-[#101010]/95 backdrop-blur-md border-b border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+          ? "bg-background/95 backdrop-blur-md border-b border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
           : "bg-transparent border-b border-transparent"
       }`}
     >
@@ -50,7 +78,7 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
       {/* Search Bar - centered absolute */}
       <div
         id="search"
-        className="absolute left-0 top-1/2 -translate-y-1/2 block h-[44.8px] w-[368px] max-w-[368px] text-[14px] leading-[22.4px] text-[#aaaaaa]"
+        className="absolute left-0 top-1/2 -translate-y-1/2 block h-[44.8px] w-[368px] max-w-[368px] text-[14px] leading-[22.4px] text-muted-foreground"
         style={{
           boxSizing: "border-box",
           fontFamily:
@@ -130,32 +158,48 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
 
       {/* Right side actions */}
       <div className="flex-1 flex items-center justify-end gap-3 -translate-y-1.5">
-        {/* VIP Button */}
-        <button className="flex items-center gap-1 bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-medium px-3 py-1 rounded-full border-none cursor-pointer hover:from-amber-500 hover:to-amber-400 transition-all">
-          <CrownIcon size={12} />
-          <span>Mua ngay</span>
-        </button>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
+              aria-label="Thông báo"
+            >
+              <BellIcon size={18} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Thông báo</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <button
-          className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
-          aria-label="Thông báo"
-        >
-          <BellIcon size={18} />
-        </button>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
+              aria-label="Lịch sử"
+            >
+              <ClockIcon size={18} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Lịch sử</p>
+          </TooltipContent>
+        </Tooltip>
 
-        <button
-          className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
-          aria-label="Lịch sử"
-        >
-          <ClockIcon size={18} />
-        </button>
-
-        <button
-          className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
-          aria-label="Toàn màn hình"
-        >
-          <MaximizeIcon size={18} />
-        </button>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
+              aria-label="Toàn màn hình"
+              onClick={toggleFullscreen}
+            >
+              <MaximizeIcon size={18} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Toàn màn hình</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* Login with hover popup */}
         <div className="relative group/login">

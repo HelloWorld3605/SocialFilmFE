@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Play, Info, Star, ChevronLeft, ChevronRight } from "lucide-react";
 
-// Dữ liệu mẫu (có thể chuyển ra file riêng)
+// Dữ liệu mẫu
 const popularMovies = [
   {
     _id: "e417e85606b3fc0cdab5f65d721f2ee0",
@@ -223,7 +223,7 @@ const HeroSection = () => {
         />
       </div>
 
-      {/* Pattern Overlay (Dấu chấm bi mờ hơn) */}
+      {/* Pattern Overlay*/}
       <div
         className="absolute inset-0 z-[1] pointer-events-none"
         style={{
@@ -233,7 +233,6 @@ const HeroSection = () => {
         }}
       />
 
-      {/* Bóng mờ chỉ ở sát viền dưới và sát viền trái, giữ nguyên giữa sáng hoàn toàn */}
       <div className="absolute inset-0 z-[2] bg-gradient-to-r from-background/90 via-background/0 to-transparent pointer-events-none" />
       <div className="absolute inset-0 z-[2] bg-gradient-to-t from-background/95 via-background/0 to-transparent pointer-events-none" />
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-background/50 via-transparent to-transparent pointer-events-none h-32" />
@@ -281,7 +280,6 @@ const HeroSection = () => {
 
       {/* Popular Movies Carousel overlaying the bottom right of hero banner */}
       <div className="absolute right-0 md:right-8 lg:right-16 bottom-2 z-20 w-full md:w-[70%] lg:w-[60%] xl:w-[50%]">
-        {/* Container cha: Loại bỏ hẳn overflow-hidden để không bị cắt */}
         <div className="w-full relative">
           <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 -left-5 -right-5 lg:-left-12 lg:-right-12 z-30 hidden md:flex items-center justify-between">
             <button
@@ -306,7 +304,6 @@ const HeroSection = () => {
             ref={carouselRef}
             className="flex gap-4 overflow-x-auto pt-10 pb-4 px-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
-            {/* Spacer đầu: Đẩy card đầu tiên vào trong để khi scale không bị lấn ra mép trái */}
             <div className="w-6 md:w-8 flex-none" />
 
             {popularMovies.map((movie, index) => (
@@ -323,7 +320,6 @@ const HeroSection = () => {
                   alt={movie.name}
                   className="w-full h-full object-cover"
                 />
-                {/* Optional: mini gradient for title on cards */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 right-0 p-2 z-20">
                   <p className="text-white text-xs font-medium line-clamp-1 pointer-events-none">
@@ -333,7 +329,6 @@ const HeroSection = () => {
               </div>
             ))}
 
-            {/* Spacer cuối */}
             <div className="w-8 flex-none" />
           </div>
         </div>
