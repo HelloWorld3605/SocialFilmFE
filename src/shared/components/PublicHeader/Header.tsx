@@ -7,6 +7,7 @@ import {
   MaximizeIcon,
   UserIcon,
   ChevronDownIcon,
+  HeartIcon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -66,43 +67,35 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 h-[60px] pt-3 z-40 flex items-center px-4 pl-[212px] transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 h-[60px] z-40 flex items-center px-6 gap-6 transition-all duration-300 ${
         isScrolled
           ? "bg-background/95 backdrop-blur-md border-b border-white/10 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
           : "bg-transparent border-b border-transparent"
       }`}
     >
-      {/* Spacer for left alignment */}
-      <div className="flex-1" />
+      {/* Logo */}
+      <div className="flex items-center shrink-0">
+        <img
+          src="/SOCIAL FILM  LOGO.png"
+          alt="Social Film Logo"
+          className="h-8 w-auto"
+        />
+      </div>
 
-      {/* Search Bar - centered absolute */}
-      <div
-        id="search"
-        className="absolute left-0 top-1/2 -translate-y-1/2 block h-[44.8px] w-[368px] max-w-[368px] text-[14px] leading-[22.4px] text-muted-foreground"
-        style={{
-          boxSizing: "border-box",
-          fontFamily:
-            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
-          WebkitTapHighlightColor: "rgba(0, 0, 0, 0)",
-        }}
-      >
+      {/* Search */}
+      <div className="flex-1 max-w-sm">
         <form
-          className="search-elements flex h-full items-center rounded-lg bg-white/10 px-4 backdrop-blur-sm"
+          className="flex items-center h-9 rounded-lg bg-white/10 px-4"
           action="/"
           method="GET"
           id="form-filter"
           autoComplete="off"
           onSubmit={handleSubmit}
         >
-          <div
-            className="search-icon mr-2.5 flex shrink-0 items-center text-white"
-            style={{ marginTop: "-2px" }}
-          >
-            <SearchIcon size={16} />
-          </div>
+          <SearchIcon size={16} />
           <input
             id="main-search"
-            className="search-input h-full w-full border-none bg-transparent text-[14px] font-normal leading-[22.4px] text-white outline-none placeholder:font-normal placeholder:text-white"
+            className="flex-1 bg-transparent outline-none text-white text-sm font-normal placeholder:text-white/90 placeholder:font-normal ml-2"
             placeholder="Tìm kiếm phim, diễn viên"
             autoComplete="off"
             type="text"
@@ -115,7 +108,8 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
         </form>
       </div>
 
-      <nav className="absolute left-[392px] top-1/2 hidden -translate-y-1/2 items-center gap-5 text-sm font-normal text-white/90 xl:flex">
+      {/* Nav */}
+      <nav className="hidden xl:flex items-center gap-3 text-xs font-normal text-white/90">
         <button
           type="button"
           className="font-normal transition-colors hover:text-white"
@@ -157,7 +151,21 @@ export function Header({ onSearch, isSearching = false }: HeaderProps) {
       </nav>
 
       {/* Right side actions */}
-      <div className="flex-1 flex items-center justify-end gap-3 -translate-y-1.5">
+      <div className="flex-1 flex items-center justify-end gap-3">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <button
+              className="bg-transparent border-none cursor-pointer text-white/60 hover:text-white transition-colors p-1"
+              aria-label="Danh sách của tôi"
+            >
+              <HeartIcon size={18} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Danh sách của tôi</p>
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <button

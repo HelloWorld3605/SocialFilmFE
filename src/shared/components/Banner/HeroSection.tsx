@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Play, Info, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Info, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Dữ liệu mẫu
 const popularMovies = [
@@ -254,16 +254,6 @@ const HeroSection = () => {
             {activeMovie.episode_current}
           </span>
           <span className="text-foreground/80">{activeMovie.lang}</span>
-        </div>
-
-        <div className="flex items-center gap-1 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <Star
-              key={i}
-              className="w-5 h-5 fill-star text-star drop-shadow-md"
-            />
-          ))}
-          <Star className="w-5 h-5 text-star drop-shadow-md" />
         </div>
 
         <div className="flex items-center gap-4">
