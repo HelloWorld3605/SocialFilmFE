@@ -240,7 +240,7 @@ const HeroSection = () => {
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-background/50 via-transparent to-transparent pointer-events-none h-32" />
 
       {/* Main Content Info */}
-      <div className="relative z-10 flex flex-col justify-end h-full px-4 md:px-12 pb-12 w-full max-w-[70%]">
+      <div className="relative z-10 flex flex-col justify-end h-full layout-padding pb-12 w-full max-w-[70%]">
         <h2 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-foreground text-shadow-hero leading-none mb-2">
           {activeMovie.name}
         </h2>

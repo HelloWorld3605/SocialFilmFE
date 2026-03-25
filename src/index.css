@@ -72,4 +72,14 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Layout utilities for consistent page alignment */
+  .layout-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  .layout-margin {
+    @apply mx-4 sm:mx-6 lg:mx-8;
+  }
+
+  
 }

@@ -1,26 +1,33 @@
+import HeroSection from "@/shared/components/Banner/HeroSection";
+import MovieRow from "@/shared/components/Row/MovieRow";
 import CategoryTabs from "@/shared/components/CategoryTabs";
 import GenreChips from "@/shared/components/GenreChips";
-import MovieRow from "@/shared/components/Row/MovieRow";
 import FeaturedCard from "@/shared/components/FeaturedCard";
-import { trendingMovies, seriesMovies, movies } from "@/shared/data/movies";
+import {
+  trendingMovies,
+  topRatedMovies,
+  actionMovies,
+  sciFiMovies,
+  dramaMovies,
+} from "@/shared/data/movies";
 
 const HomePage = () => {
   return (
-    <>
-      <CategoryTabs />
-      <GenreChips />
-      <MovieRow movies={trendingMovies} />
-      <MovieRow movies={seriesMovies} />
-      <MovieRow movies={[...movies].reverse().slice(0, 6)} />
-      <FeaturedCard />
-      <MovieRow movies={movies.slice(0, 6)} />
-
-      <div className="flex justify-center py-6">
-        <button className="flex items-center gap-2 px-8 py-3 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors">
-          Show More
-        </button>
+    <div className="bg-background">
+      <HeroSection />
+      <div className="relative z-10 space-y-12 pb-16 pt-4">
+        <div className="bg-background">
+          <CategoryTabs />
+          <GenreChips />
+        </div>
+        <MovieRow title="Xu hướng" movies={trendingMovies} />
+        <MovieRow title="Đánh giá cao" movies={topRatedMovies} />
+        <MovieRow title="Hành động" movies={actionMovies} />
+        <MovieRow title="Khoa học viễn tưởng" movies={sciFiMovies} />
+        <MovieRow title="Chính kịch" movies={dramaMovies} />
+        <FeaturedCard />
       </div>
-    </>
+    </div>
   );
 };
 

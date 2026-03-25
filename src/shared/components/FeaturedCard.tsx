@@ -9,7 +9,7 @@ const FeaturedCard = () => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-      className="mx-6 md:mx-16 my-10 rounded-xl overflow-hidden relative"
+      className="layout-margin my-10 rounded-xl overflow-hidden relative"
     >
       <img
         src={featuredBg}
@@ -20,25 +20,36 @@ const FeaturedCard = () => {
 
       <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
         <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-          <span className="px-2 py-0.5 bg-destructive/80 text-foreground rounded text-xs font-bold">16</span>
+          <span className="px-2 py-0.5 bg-destructive/80 text-foreground rounded text-xs font-bold">
+            16
+          </span>
           <span>2022</span>
           <span>2 Seasons</span>
           <div className="flex items-center gap-0.5 ml-2">
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <Star key={i} className="w-3 h-3 fill-star text-star" />
             ))}
           </div>
         </div>
 
-        <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">House of the Dragon</h3>
+        <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+          House of the Dragon
+        </h3>
         <p className="text-sm text-muted-foreground max-w-lg mb-4 leading-relaxed">
-          Lorem ipsum dolor sit amet consectetur. Rutrum ultrices amet cursus hac viverra semper tincidunt condimentum.
+          Lorem ipsum dolor sit amet consectetur. Rutrum ultrices amet cursus
+          hac viverra semper tincidunt condimentum.
         </p>
 
         <div className="flex items-center gap-3 mb-4 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-foreground transition-colors">Infomations</a>
-          <a href="#" className="hover:text-foreground transition-colors">Trailer</a>
-          <a href="#" className="hover:text-foreground transition-colors">Reviews</a>
+          <a href="#" className="hover:text-foreground transition-colors">
+            Infomations
+          </a>
+          <a href="#" className="hover:text-foreground transition-colors">
+            Trailer
+          </a>
+          <a href="#" className="hover:text-foreground transition-colors">
+            Reviews
+          </a>
         </div>
 
         <div className="flex items-center gap-3">

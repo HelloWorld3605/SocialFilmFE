@@ -12,7 +12,7 @@ const CategoryTabs = () => {
   const [active, setActive] = useState(0);
 
   return (
-    <div className="flex items-center justify-center gap-6 md:gap-10 py-6 px-6">
+    <div className="flex items-center justify-center gap-6 md:gap-10 py-6 layout-padding">
       {tabs.map((tab, i) => (
         <button
           key={tab.label}

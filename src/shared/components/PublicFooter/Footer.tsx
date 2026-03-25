@@ -1,163 +1,216 @@
+import { Link } from "react-router-dom";
+import {
+  Film,
+  Facebook,
+  Twitter,
+  Instagram,
+  Youtube,
+  MapPin,
+  Phone,
+  Mail,
+  ArrowRight,
+} from "lucide-react";
+
 const Footer = () => {
   return (
-    <footer className="border-t border-border mt-10 py-10 px-6 md:px-16 bg-background/50 relative overflow-hidden">
-      {/* Background Icon On The Right */}
-      <div className="absolute right-[-100px] bottom-[-100px] pointer-events-none opacity-20 hidden md:block select-none">
-        <img
-          alt="footer background"
-          loading="lazy"
-          width="500"
-          height="700"
-          src="https://rophim.is/wp-content/themes/ophim-wp-theme-rophimme/assets/img/footer-icon.svg"
-          className="w-[400px] xl:w-[500px] h-auto object-contain"
-          style={{ color: "transparent" }}
-        />
-      </div>
+    <footer className="border-t border-border mt-10 bg-background/95 pt-16 pb-8 layout-padding relative overflow-hidden">
+      {/* Abstract Background Element */}
+      <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="w-full max-w-7xl relative z-10 text-left flex flex-col items-start gap-8">
-        {/* Vietnam Flag Banner */}
-        <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 w-fit">
-          <img
-            alt="Vietnam"
-            loading="lazy"
-            width="24"
-            height="24"
-            src="https://rophim.is/wp-content/themes/ophim-wp-theme-rophimme/assets/img/vn_flag.svg"
-            className="shrink-0"
-            style={{ color: "transparent" }}
-          />
-          <span className="font-semibold text-[#f3cd7b] text-sm md:text-base tracking-wide flex-start">
-            Hoàng Sa &amp; Trường Sa là của Việt Nam!
-          </span>
-        </div>
-
-        {/* Logo and Socials */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-start gap-6 xl:gap-10 w-full">
-          <a href="/" className="shrink-0 self-start">
-            <img
-              className="h-12 w-auto object-contain"
-              src="https://rophim.is/wp-content/uploads/2025/11/cropped-logo.png"
-              alt="Rổ Phim"
-            />
-          </a>
-
-          <div className="flex flex-wrap items-center justify-start gap-3">
-            {[
-              {
-                href: "https://t.me/congdongrophim",
-                title: "Telegram",
-                img: "telegram-icon.svg",
-              },
-              {
-                href: "https://discord.gg/rophim",
-                title: "Discord",
-                img: "discord-icon.svg",
-              },
-              { href: "https://x.com/rophimtv", title: "X", img: "x-icon.svg" },
-              {
-                href: "https://www.facebook.com/rogiaitri",
-                title: "Facebook",
-                img: "facebook-icon.svg",
-              },
-              {
-                href: "https://www.tiktok.com/@rophimtv",
-                title: "Tiktok",
-                img: "tiktok-icon.svg",
-              },
-              {
-                href: "https://www.youtube.com/@rophimcom",
-                title: "Youtube",
-                img: "youtube-icon.svg",
-              },
-              {
-                href: "https://www.threads.net/@rophimtv",
-                title: "Threads",
-                img: "threads-icon.svg",
-              },
-              {
-                href: "https://www.instagram.com/rophimtv",
-                title: "Instagram",
-                img: "instagram-icon.svg",
-              },
-            ].map((social) => (
-              <a
-                key={social.title}
-                target="_blank"
-                rel="noopener noreferrer"
-                href={social.href}
-                title={social.title}
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/20 hover:-translate-y-1 transition-all duration-300 shadow-sm"
-              >
-                <img
-                  alt={social.title}
-                  loading="lazy"
-                  width="20"
-                  height="20"
-                  src={`https://rophim.is/wp-content/themes/ophim-wp-theme-rophimme/assets/img/${social.img}`}
-                  style={{ color: "transparent" }}
-                  className="opacity-80 group-hover:opacity-100"
-                />
-              </a>
-            ))}
+      <div className="w-full relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 xl:gap-16 mb-16">
+        {/* Brand Column */}
+        <div className="flex flex-col gap-6 lg:col-span-1">
+          <Link to="/" className="flex items-center gap-2">
+            <Film className="h-8 w-8 text-primary" />
+            <span
+              className="text-3xl font-bold tracking-wider text-primary"
+              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+            >
+              SocialFilm
+            </span>
+          </Link>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Nền tảng giải trí trực tuyến hàng đầu, mang đến cho bạn những không
+            gian điện ảnh đỉnh cao, đa dạng thể loại và chất lượng hình ảnh vượt
+            trội. Trải nghiệm xem phim không giới hạn mọi lúc, mọi nơi.
+          </p>
+          <div className="flex items-center gap-4 mt-2">
+            <a
+              href="#"
+              className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:-translate-y-1"
+            >
+              <Facebook className="w-4 h-4" />
+            </a>
+            <a
+              href="#"
+              className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:-translate-y-1"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+            <a
+              href="#"
+              className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:-translate-y-1"
+            >
+              <Instagram className="w-4 h-4" />
+            </a>
+            <a
+              href="#"
+              className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300 hover:-translate-y-1"
+            >
+              <Youtube className="w-4 h-4" />
+            </a>
           </div>
         </div>
 
-        {/* Links Menu */}
-        <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-3 text-sm font-medium text-white/70 w-full">
-          <a
-            title="Hỏi-Đáp"
-            href="#"
-            className="hover:text-white hover:underline underline-offset-4 transition-all"
-          >
-            Hỏi-Đáp
-          </a>
-          <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a
-            title="Chính sách bảo mật"
-            href="#"
-            className="hover:text-white hover:underline underline-offset-4 transition-all"
-          >
-            Chính sách bảo mật
-          </a>
-          <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a
-            title="Điều khoản sử dụng"
-            href="#"
-            className="hover:text-white hover:underline underline-offset-4 transition-all"
-          >
-            Điều khoản sử dụng
-          </a>
-          <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a
-            title="Giới thiệu"
-            href="#"
-            className="hover:text-white hover:underline underline-offset-4 transition-all"
-          >
-            Giới thiệu
-          </a>
-          <span className="w-1 h-1 rounded-full bg-white/20 hidden md:block"></span>
-          <a
-            title="Liên hệ"
-            href="#"
-            className="hover:text-white hover:underline underline-offset-4 transition-all"
-          >
-            Liên hệ
-          </a>
+        {/* Links Column 1 */}
+        <div className="flex flex-col gap-6">
+          <h3 className="text-lg font-semibold text-foreground">
+            Top Thể Loại
+          </h3>
+          <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Phim Hành Động
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Phim Khoa Học Viễn Tưởng
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Phim Kinh Dị
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Phim Hài Hước
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Anime Trending
+              </a>
+            </li>
+          </ul>
         </div>
 
-        {/* Notice / Description */}
-        <div className="text-sm text-white/50 leading-relaxed max-w-5xl text-left w-full relative z-10">
-          RoPhim (Rổ Phim) - Phim hay cả rổ - trang xem phim online miễn phí
-          Full HD Vietsub, thuyết minh + lồng tiếng. Kho phim mới khổng lồ, phim
-          chiếu rạp, phim bộ, phim lẻ từ nhiều quốc gia như Việt Nam, Hàn Quốc,
-          Trung Quốc, Thái Lan, Nhật Bản, Âu Mỹ… đa dạng thể loại. Khám phá nền
-          tảng phim trực tuyến hay nhất 2025 chất lượng 4K!
+        {/* Links Column 2 */}
+        <div className="flex flex-col gap-6">
+          <h3 className="text-lg font-semibold text-foreground">
+            Hỗ Trợ & Chính Sách
+          </h3>
+          <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Gói Đăng Ký Trả Phí
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Trung Tâm Trợ Giúp
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Câu Hỏi Thường Gặp (FAQ)
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Điều Khoản Sử Dụng
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center gap-2 hover:text-primary transition-colors group"
+              >
+                <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all font-bold" />
+                Chính Sách Bảo Mật
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {/* Contact Column */}
+        <div className="flex flex-col gap-6">
+          <h3 className="text-lg font-semibold text-foreground">Liên Hệ</h3>
+          <ul className="flex flex-col gap-4 text-sm text-muted-foreground">
+            <li className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-primary" />
+              </div>
+              <span className="mt-1">
+                123 Đại Lộ Điện Ảnh, Quận 1, TP. Hồ Chí Minh
+              </span>
+            </li>
+            <li className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                <Phone className="w-4 h-4 text-primary" />
+              </div>
+              <span>+84 123 456 789</span>
+            </li>
+            <li className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                <Mail className="w-4 h-4 text-primary" />
+              </div>
+              <span>contact@socialfilm.vn</span>
+            </li>
+          </ul>
         </div>
       </div>
 
-      {/* Copyright - full width divider */}
-      <div className="-mx-6 md:-mx-16 mt-4 border-t border-white/10 px-6 md:px-16 pt-4 text-xs text-white/40 font-medium text-left relative z-10">
-        Copyright ©2025 Rophim
+      {/* Bottom Bar */}
+      <div className="w-full relative z-10 border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground text-center md:text-left">
+          &copy; {new Date().getFullYear()} SocialFilm. All rights reserved.
+        </p>
+        <div className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+          <a href="#" className="hover:text-primary transition-colors">
+            Điều khoản bổ sung
+          </a>
+          <a href="#" className="hover:text-primary transition-colors">
+            Chính sách bảo mật
+          </a>
+        </div>
       </div>
     </footer>
   );

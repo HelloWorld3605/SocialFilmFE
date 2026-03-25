@@ -5,7 +5,7 @@ const GenreChips = () => {
   const [active, setActive] = useState<string | null>("Action");
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide px-6 md:px-16 py-4">
+    <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide layout-padding py-4">
       {genres.map((genre) => (
         <button
           key={genre}

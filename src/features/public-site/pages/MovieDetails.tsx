@@ -50,11 +50,11 @@ const MovieDetail = () => {
       <Header />
 
       {/* Hero Backdrop */}
-      <div className="relative h-[70vh] w-full overflow-hidden">
+      <div className="relative h-[80vh] w-full overflow-hidden">
         <img
           src={movie.thumb_url || movie.backdrop || movie.poster}
           alt={movie.title}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-[center_15%]"
           onError={() => setImageError(true)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
