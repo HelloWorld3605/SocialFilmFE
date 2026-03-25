@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Play, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Dữ liệu mẫu
 const popularMovies = [
@@ -180,6 +181,7 @@ const HeroSection = () => {
   const activeMovie = popularMovies[activeIndex];
   const carouselRef = useRef<HTMLDivElement>(null);
   const movieCardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const navigate = useNavigate();
 
   const setActiveMovieByIndex = (index: number) => {
     const targetCard = movieCardRefs.current[index];
@@ -261,7 +263,10 @@ const HeroSection = () => {
             <Play className="w-5 h-5 fill-current" />
             Xem ngay
           </button>
-          <button className="flex items-center gap-2 px-8 py-3.5 bg-foreground/20 backdrop-blur-md border tracking-wide border-foreground/30 text-foreground rounded-sm font-medium text-base hover:bg-foreground/30 transition-colors shadow-lg">
+          <button
+            onClick={() => navigate(`/movie/${activeMovie._id}`)}
+            className="flex items-center gap-2 px-8 py-3.5 bg-foreground/20 backdrop-blur-md border tracking-wide border-foreground/30 text-foreground rounded-sm font-medium text-base hover:bg-foreground/30 transition-colors shadow-lg"
+          >
             <Info className="w-5 h-5" />
             Chi tiết
           </button>
