@@ -1,65 +1,82 @@
 import { Play, Plus, Star } from "lucide-react";
-import featuredBg from "@/assets/featured-bg.jpg";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import type { MovieSummary } from "@/shared/types/api";
+import { buildWatchUrl } from "@/shared/lib/watch";
 
-const FeaturedCard = () => {
+interface FeaturedCardProps {
+  movie?: MovieSummary | null;
+}
+
+const FeaturedCard = ({ movie }: FeaturedCardProps) => {
+  const navigate = useNavigate();
+
+  if (!movie) {
+    return null;
+  }
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-      className="layout-margin my-10 rounded-xl overflow-hidden relative"
+      className="layout-margin relative my-10 overflow-hidden rounded-xl"
     >
       <img
-        src={featuredBg}
-        alt="Featured series"
-        className="w-full h-[350px] md:h-[400px] object-cover"
+        src={movie.thumbUrl || movie.posterUrl || ""}
+        alt={movie.name}
+        className="h-[420px] w-full object-cover md:h-[500px] lg:h-[560px]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
       <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-        <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-          <span className="px-2 py-0.5 bg-destructive/80 text-foreground rounded text-xs font-bold">
-            16
+        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded bg-destructive/80 px-2 py-0.5 text-xs font-bold text-foreground">
+            {movie.quality || "HD"}
           </span>
-          <span>2022</span>
-          <span>2 Seasons</span>
-          <div className="flex items-center gap-0.5 ml-2">
+          <span>{movie.year || "Chưa rõ"}</span>
+          <span>{movie.episodeCurrent || "Đang cập nhật"}</span>
+          <div className="ml-2 flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((i) => (
-              <Star key={i} className="w-3 h-3 fill-star text-star" />
+              <Star key={i} className="h-3 w-3 fill-star text-star" />
             ))}
           </div>
         </div>
 
-        <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-          House of the Dragon
+        <h3 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
+          {movie.name}
         </h3>
-        <p className="text-sm text-muted-foreground max-w-lg mb-4 leading-relaxed">
-          Lorem ipsum dolor sit amet consectetur. Rutrum ultrices amet cursus
-          hac viverra semper tincidunt condimentum.
+        <p className="mb-4 max-w-lg text-sm leading-relaxed text-muted-foreground">
+          {movie.originName ||
+            "Dữ liệu được lấy trực tiếp từ API phim của bạn."}
         </p>
 
-        <div className="flex items-center gap-3 mb-4 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-foreground transition-colors">
-            Infomations
-          </a>
-          <a href="#" className="hover:text-foreground transition-colors">
-            Trailer
-          </a>
-          <a href="#" className="hover:text-foreground transition-colors">
-            Reviews
-          </a>
+        <div className="mb-4 flex items-center gap-3 text-sm text-muted-foreground">
+          {movie.categories?.slice(0, 3).map((category) => (
+            <span
+              key={category}
+              className="transition-colors hover:text-foreground"
+            >
+              {category}
+            </span>
+          ))}
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity">
-            <Play className="w-4 h-4 fill-current" />
-            Watch
+          <button
+            onClick={() => navigate(buildWatchUrl(movie.slug))}
+            className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <Play className="h-4 w-4 fill-current" />
+            Xem ngay
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 text-foreground text-sm font-medium hover:text-primary transition-colors">
-            <Plus className="w-4 h-4" />
-            MY LIST
+          <button
+            onClick={() => navigate(`/movie/${movie.slug}`)}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
+          >
+            <Plus className="h-4 w-4" />
+            Chi tiết
           </button>
         </div>
       </div>

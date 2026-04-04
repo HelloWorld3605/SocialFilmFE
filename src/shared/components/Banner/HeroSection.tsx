@@ -1,231 +1,114 @@
-import { useRef, useState } from "react";
-import { Play, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Play,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  Globe2,
+  Sparkles,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import type { MovieSummary } from "@/shared/types/api";
+import { buildWatchUrl } from "@/shared/lib/watch";
 
-// Dữ liệu mẫu
-const popularMovies = [
-  {
-    _id: "e417e85606b3fc0cdab5f65d721f2ee0",
-    name: "Trục Ngọc",
-    origin_name: "Pursuit Of Jade",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260307-1/7e5b11b1d5ce3514f6d62787d164b816.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260307-1/81572d43eddf1dc784f3f53f6323f46d.jpg",
-    episode_current: "Tập 24",
-    quality: "FHD",
-    lang: "Vietsub + Thuyết Minh",
-    year: 2026,
-  },
-  {
-    _id: "8301854f418d355675f6366dc08573f6",
-    name: "Đồi Gió Hú",
-    origin_name: "Wuthering Heights",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260315-1/acb91621df63910c25e0ebac8cb2019a.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260315-1/6ee95a5ca97e71e679306585b716fe44.jpg",
-    episode_current: "Full",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "b084182f10cd8031300234c7551ef710",
-    name: "Thiếu Niên Bạc Tỉ",
-    origin_name: "The Billionaire",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260316-1/d5b36b32a80745b8c319c39b56888b05.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260316-1/165f40d7ae25a0c65de82b7345762cf7.jpg",
-    episode_current: "Full",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2011,
-  },
-  {
-    _id: "fc5bbeb3f3a9051f9c7f3cf8b77434fb",
-    name: "Siêu Nhân Điện Quang Geed",
-    origin_name: "Ultraman Geed",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260117-1/bbd4d9a16c358ee0a636d8f57dc5aa19.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260117-1/03b8c8e38e8fd2640a9f7b2a9a14312c.jpg",
-    episode_current: "Tập 18",
-    quality: "FHD",
-    lang: "Vietsub + Lồng Tiếng",
-    year: 2017,
-  },
-  {
-    _id: "292f0300bbddb5ad9efc10f31c452e57",
-    name: "Trâm Khoá Tình",
-    origin_name: "The Inescapable",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260309-1/d2a60306fcc9d2a518dd80def617dd95.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260309-1/872ed7e913666c2336ccd9f118accb78.jpg",
-    episode_current: "Tập 21",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "4367fac13a0c0b12eabbd2f483581b2a",
-    name: "Trăng Chiều Rực Rỡ",
-    origin_name: "In The Clear Moonlit Dusk",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260113-1/e2b63c3c759af96194e8d24d35228bcd.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260113-1/f8b8e380c7706cc6437b74f832ffbfc9.jpg",
-    episode_current: "Tập 10",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "c841b23266e204fc9271733469516275",
-    name: "Nữ Phản Diện Được Hoàng Tử Nước Láng Giềng Yêu Mến",
-    origin_name:
-      "The Villainess Is Adored by the Prince of the Neighbor Kingdom",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260114-1/91ee78b105a7f89504686b54e3aad4d2.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260114-1/ed13ec167659375eabecf986662cfe12.jpg",
-    episode_current: "Tập 10",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "68ff9c82826dcda9030b6b0990efc033",
-    name: "Thám Tử Lừng Danh Conan",
-    origin_name: "Detective Conan",
-    poster_url:
-      "https://phimimg.com/upload/vod/20240310-1/025424cf62248b9a7b54279ef5416e26.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20240310-1/2a39971cc29c2802259b918eb437a45b.jpg",
-    episode_current: "Tập 1193",
-    quality: "FHD",
-    lang: "Vietsub + Lồng Tiếng",
-    year: 1996,
-  },
-  {
-    _id: "991becb4d6456d01dad848301495f0ea",
-    name: "Tử Khoản",
-    origin_name: "Dead Account",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260113-1/f08d56e30aae2c66237412ef5f7d9a64.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260113-1/c425695aff7590f7d643a28cd1854366.jpg",
-    episode_current: "Tập 10",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "90f5c2fca26cdc32f97373bba4c0c337",
-    name: "Tojima Muốn Trở Thành Kamen Rider",
-    origin_name: "Tojima Wants to Be a Kamen Rider",
-    poster_url:
-      "https://phimimg.com/upload/vod/20251012-1/ab37bc050815973d60ffa23caf1008b6.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20251012-1/713fa72d94ec3ccc5d50d8498aba149d.jpg",
-    episode_current: "Tập 23",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2025,
-  },
-  {
-    _id: "1fee5d8b6b5230e47fc933334d03ff5b",
-    name: "Tình Yêu Bọ Xít",
-    origin_name: "Duang With You",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260203-1/4f012b3b1425ea6f159faeede915d199.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260203-1/610ef761198897ffbf87df213991bb66.jpg",
-    episode_current: "Tập 7",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2026,
-  },
-  {
-    _id: "1b96773a6c08eb3441a9827be8972ea2",
-    name: "SI-VIS: Tiếng Vọng Của Anh Hùng",
-    origin_name: "SI-VIS: The Sound Of Heroes",
-    poster_url:
-      "https://phimimg.com/upload/vod/20251012-1/f6e14e937f422646d867cc63535bc9d6.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20251012-1/025a04f41e2e0b7c2f1cec6df4d3ecb6.jpg",
-    episode_current: "Tập 22",
-    quality: "FHD",
-    lang: "Vietsub",
-    year: 2025,
-  },
-  {
-    _id: "8424248303304cda787d00ef2732f8f0",
-    name: "Siêu Cảnh Sát Vũ Trụ Gavan Infinity",
-    origin_name: "Super Space Sheriff Gavan Infinity",
-    poster_url:
-      "https://phimimg.com/upload/vod/20260228-1/880269004d7c97f22c21b9073695eae9.jpg",
-    thumb_url:
-      "https://phimimg.com/upload/vod/20260228-1/5b3b0a72ea5e8d9f8bc9d0d276bca3b3.jpg",
-    episode_current: "Tập 5",
-    quality: "FHD",
-    lang: "Vietsub + Lồng Tiếng",
-    year: 2026,
-  },
-];
+interface HeroSectionProps {
+  movies: MovieSummary[];
+}
 
-const HeroSection = () => {
+const HeroSection = ({ movies }: HeroSectionProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeMovie = popularMovies[activeIndex];
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const carouselViewportRef = useRef<HTMLDivElement | null>(null);
   const movieCardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const navigate = useNavigate();
 
-  const setActiveMovieByIndex = (index: number) => {
-    const targetCard = movieCardRefs.current[index];
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [movies]);
 
-    setActiveIndex(index);
-
-    if (!targetCard) {
+  useEffect(() => {
+    if (movies.length <= 1) {
       return;
     }
 
-    targetCard.scrollIntoView({
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % movies.length);
+    }, 6500);
+
+    return () => window.clearInterval(timer);
+  }, [movies.length]);
+
+  useEffect(() => {
+    const viewport = carouselViewportRef.current;
+    const activeCard = movieCardRefs.current[activeIndex];
+
+    if (!viewport || !activeCard) {
+      return;
+    }
+
+    const nextLeft =
+      activeCard.offsetLeft - (viewport.clientWidth - activeCard.offsetWidth) / 2;
+
+    viewport.scrollTo({
+      left: Math.max(nextLeft, 0),
       behavior: "smooth",
-      inline: "center",
-      block: "nearest",
     });
+  }, [activeIndex]);
+
+  const activeMovie = movies[Math.min(activeIndex, Math.max(movies.length - 1, 0))] ?? null;
+
+  const heroFacts = useMemo(() => {
+    if (!activeMovie) {
+      return [];
+    }
+
+    return [
+      {
+        icon: Sparkles,
+        label: activeMovie.quality || "HD",
+      },
+      {
+        icon: Clapperboard,
+        label: activeMovie.episodeCurrent || "Đang cập nhật",
+      },
+      {
+        icon: Globe2,
+        label: activeMovie.lang || "Vietsub",
+      },
+    ];
+  }, [activeMovie?.episodeCurrent, activeMovie?.lang, activeMovie?.quality]);
+
+  if (!activeMovie) {
+    return (
+      <section className="relative flex h-screen items-center justify-center overflow-hidden bg-background">
+        <p className="text-muted-foreground">Đang tải phần phim nổi bật...</p>
+      </section>
+    );
+  }
+
+  const setActiveMovieByIndex = (index: number) => {
+    setActiveIndex(index);
   };
 
   const scrollCarousel = (direction: "left" | "right") => {
     const delta = direction === "left" ? -1 : 1;
-    const nextIndex = Math.min(
-      Math.max(activeIndex + delta, 0),
-      popularMovies.length - 1,
-    );
-
-    if (nextIndex === activeIndex) {
-      return;
+    const nextIndex = Math.min(Math.max(activeIndex + delta, 0), movies.length - 1);
+    if (nextIndex !== activeIndex) {
+      setActiveMovieByIndex(nextIndex);
     }
-
-    setActiveMovieByIndex(nextIndex);
   };
 
   return (
-    <section className="relative w-full h-screen overflow-hidden">
-      {/* Background Image transitions when activeMovie changes */}
-      <div className="absolute inset-0 transition-opacity duration-700 ease-in-out z-0">
+    <section className="relative h-screen w-full overflow-hidden">
+      <div className="absolute inset-0 z-0 transition-opacity duration-700 ease-in-out">
         <img
-          key={activeMovie._id}
-          src={activeMovie.thumb_url}
+          key={activeMovie.slug}
+          src={activeMovie.thumbUrl || activeMovie.posterUrl || ""}
           alt={activeMovie.name}
-          className="absolute inset-0 w-full h-full object-cover object-[center_10%] animate-in fade-in duration-700"
+          className="absolute inset-0 h-full w-full object-cover object-[center_10%] animate-in fade-in duration-700"
         />
       </div>
 
-      {/* Pattern Overlay*/}
       <div
         className="absolute inset-0 z-[1] pointer-events-none"
         style={{
@@ -237,94 +120,153 @@ const HeroSection = () => {
 
       <div className="absolute inset-0 z-[2] bg-gradient-to-r from-background/90 via-background/0 to-transparent pointer-events-none" />
       <div className="absolute inset-0 z-[2] bg-gradient-to-t from-background/95 via-background/0 to-transparent pointer-events-none" />
-      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-background/50 via-transparent to-transparent pointer-events-none h-32" />
+      <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.22),transparent_30%)] pointer-events-none" />
+      <div className="absolute inset-0 z-[2] h-40 bg-gradient-to-b from-background/60 via-transparent to-transparent pointer-events-none" />
 
-      {/* Main Content Info */}
-      <div className="relative z-10 flex flex-col justify-end h-full layout-padding pb-12 w-full max-w-[70%]">
-        <h2 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight text-foreground text-shadow-hero leading-none mb-2">
-          {activeMovie.name}
-        </h2>
-        <p className="text-lg md:text-xl lg:text-2xl font-bold text-foreground/90 text-shadow-hero mb-4">
-          {activeMovie.origin_name} ({activeMovie.year})
-        </p>
+      <div className="relative z-10 h-full w-full">
+        <div className="layout-padding absolute inset-x-0 bottom-0 z-20 pb-6">
+          <div className="grid w-full grid-cols-[minmax(0,0.92fr)_minmax(0,1.38fr)] items-end gap-5">
+            <div className="space-y-5 p-1 pr-2">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.34em] text-primary/90 text-shadow-hero">
+                  {activeMovie.originName || "Mới cập nhật"}
+                </p>
+                <h2 className="max-w-3xl text-3xl font-black leading-[0.94] tracking-tight text-foreground text-shadow-hero md:text-4xl lg:text-5xl">
+                  {activeMovie.name}
+                </h2>
+              </div>
 
-        <div className="flex items-center gap-3 mb-4 text-sm font-medium">
-          <span className="bg-primary/20 text-primary px-2.5 py-1 rounded-md">
-            {activeMovie.quality}
-          </span>
-          <span className="text-foreground/80">
-            {activeMovie.episode_current}
-          </span>
-          <span className="text-foreground/80">{activeMovie.lang}</span>
-        </div>
+              <div className="flex flex-wrap gap-3">
+                {heroFacts.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.label}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm text-white/88 backdrop-blur-xl"
+                    >
+                      <Icon className="h-4 w-4 text-primary" />
+                      <span>{item.label}</span>
+                    </div>
+                  );
+                })}
+                {(activeMovie.categories ?? []).slice(0, 2).map((category) => (
+                  <div
+                    key={category}
+                    className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/72 backdrop-blur-xl"
+                  >
+                    {category}
+                  </div>
+                ))}
+              </div>
 
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground rounded-sm font-semibold text-base hover:scale-105 transition-transform shadow-lg">
-            <Play className="w-5 h-5 fill-current" />
-            Xem ngay
-          </button>
-          <button
-            onClick={() => navigate(`/movie/${activeMovie._id}`)}
-            className="flex items-center gap-2 px-8 py-3.5 bg-foreground/20 backdrop-blur-md border tracking-wide border-foreground/30 text-foreground rounded-sm font-medium text-base hover:bg-foreground/30 transition-colors shadow-lg"
-          >
-            <Info className="w-5 h-5" />
-            Chi tiết
-          </button>
-        </div>
-      </div>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  onClick={() => navigate(buildWatchUrl(activeMovie.slug))}
+                  className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Xem ngay
+                </button>
+                <button
+                  onClick={() => navigate(`/movie/${activeMovie.slug}`)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  <Plus className="h-4 w-4" />
+                  Chi tiết
+                </button>
+              </div>
+            </div>
 
-      {/* Popular Movies Carousel overlaying the bottom right of hero banner */}
-      <div className="absolute right-0 md:right-8 lg:right-16 bottom-2 z-20 w-full md:w-[70%] lg:w-[60%] xl:w-[50%]">
-        <div className="w-full relative">
-          <div className="pointer-events-none absolute top-1/2 -translate-y-1/2 -left-5 -right-5 lg:-left-12 lg:-right-12 z-30 hidden md:flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => scrollCarousel("left")}
-              aria-label="Scroll movies left"
-              className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-foreground/30 bg-background/70 text-foreground backdrop-blur-md transition-colors hover:bg-background/90"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollCarousel("right")}
-              aria-label="Scroll movies right"
-              className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-foreground/30 bg-background/70 text-foreground backdrop-blur-md transition-colors hover:bg-background/90"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+            <div className="min-w-0">
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => scrollCarousel("left")}
+                    aria-label="Cuộn phim sang trái"
+                    className="pointer-events-auto -translate-x-5 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/45 text-foreground shadow-lg backdrop-blur-xl transition-colors hover:bg-black/65"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollCarousel("right")}
+                    aria-label="Cuộn phim sang phải"
+                    className="pointer-events-auto translate-x-5 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/45 text-foreground shadow-lg backdrop-blur-xl transition-colors hover:bg-black/65"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
 
-          <div
-            ref={carouselRef}
-            className="flex gap-4 overflow-x-auto pt-10 pb-4 px-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          >
-            <div className="w-6 md:w-8 flex-none" />
+                <div
+                  ref={carouselViewportRef}
+                  className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-2 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                >
+                  {movies.map((movie, index) => (
+                    <div
+                      key={movie.slug}
+                      ref={(el) => {
+                        movieCardRefs.current[index] = el;
+                      }}
+                      onClick={() => setActiveMovieByIndex(index)}
+                      className={`group relative flex w-[205px] flex-none cursor-pointer snap-start overflow-hidden rounded-[20px] border transition-all duration-300 md:w-[245px] ${
+                        activeIndex === index
+                          ? "border-primary/70 bg-white/[0.08] shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+                          : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <div className="relative w-[72px] flex-none overflow-hidden md:w-[84px]">
+                        <img
+                          src={movie.posterUrl || movie.thumbUrl || ""}
+                          alt={movie.name}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/25" />
+                      </div>
 
-            {popularMovies.map((movie, index) => (
-              <div
-                key={movie._id}
-                ref={(el) => {
-                  movieCardRefs.current[index] = el;
-                }}
-                onClick={() => setActiveMovieByIndex(index)}
-                className={`relative flex-none w-[100px] md:w-[120px] aspect-[2/3] rounded-lg overflow-hidden cursor-pointer snap-start transition-all duration-300 transform-gpu ${index === 0 ? "origin-left" : "origin-center"} ${activeIndex === index ? "scale-[1.15] z-10 mx-3 shadow-xl" : "hover:scale-105"}`}
-              >
-                <img
-                  src={movie.poster_url}
-                  alt={movie.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent pointer-events-none" />
-                <div className="absolute bottom-0 left-0 right-0 p-2 z-20">
-                  <p className="text-white text-xs font-medium line-clamp-1 pointer-events-none">
-                    {movie.name}
-                  </p>
+                      <div className="flex min-w-0 flex-1 flex-col justify-between p-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/85">
+                            {movie.lang || "Vietsub"}
+                          </p>
+                          <h3 className="mt-1.5 line-clamp-2 text-xs font-bold leading-4 text-white md:text-sm md:leading-5">
+                            {movie.name}
+                          </h3>
+                          <p className="mt-1 line-clamp-1 text-[11px] text-white/55">
+                            {movie.originName ||
+                              movie.categories?.slice(0, 2).join(" • ") ||
+                              "Đang cập nhật"}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          <div className="flex flex-wrap gap-1.5 text-[10px] text-white/70">
+                            {movie.episodeCurrent ? (
+                              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                                {movie.episodeCurrent}
+                              </span>
+                            ) : null}
+                            {movie.year ? (
+                              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                                {movie.year}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                activeIndex === index ? "w-full bg-primary" : "w-1/3 bg-white/25"
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-
-            <div className="w-8 flex-none" />
+            </div>
           </div>
         </div>
       </div>

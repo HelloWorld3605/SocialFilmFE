@@ -80,6 +80,12 @@
   .layout-margin {
     @apply mx-4 sm:mx-6 lg:mx-8;
   }
+  .content-shell {
+    @apply mx-auto w-full max-w-[92rem];
+  }
+  .content-shell-wide {
+    @apply mx-auto w-full max-w-[100rem];
+  }
 
   
 }
