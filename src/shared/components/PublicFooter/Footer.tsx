@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import {
-  Film,
   Facebook,
   Twitter,
   Instagram,
@@ -20,8 +19,7 @@ const Footer = () => {
       <div className="w-full relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 xl:gap-16 mb-16">
         {/* Brand Column */}
         <div className="flex flex-col gap-6 lg:col-span-1">
-          <Link to="/" className="flex items-center gap-2">
-            <Film className="h-8 w-8 text-primary" />
+          <Link to="/" className="flex items-center">
             <span
               className="text-3xl font-bold tracking-wider text-primary"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}

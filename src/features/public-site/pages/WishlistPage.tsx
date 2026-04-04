@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Clock3, Play, Sparkles } from "lucide-react";
+import { Clock3, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 import { buildWatchUrl } from "@/shared/lib/watch";
 import PageNavigation from "@/shared/components/PageNavigation";
+import PaginationControls from "@/shared/components/PaginationControls";
 
 const formatHistoryTime = (value: string) =>
   new Intl.DateTimeFormat("vi-VN", {
@@ -33,8 +35,42 @@ const formatWatchProgress = (seconds?: number | null) => {
   return `Đã xem ${minutes}:${String(remainSeconds).padStart(2, "0")}`;
 };
 
+const formatDuration = (seconds?: number | null) => {
+  if (!seconds || seconds <= 0) {
+    return null;
+  }
+
+  const totalSeconds = Math.floor(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainSeconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainSeconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(remainSeconds).padStart(2, "0")}`;
+};
+
+const resolveProgressPercent = (position?: number | null, duration?: number | null) => {
+  if (!position || position <= 0) {
+    return 0;
+  }
+
+  if (duration && duration > 0) {
+    return Math.min((position / duration) * 100, 100);
+  }
+
+  return Math.min((position / 2400) * 100, 100);
+};
+
+const WISHLIST_PAGE_SIZE = 18;
+const HISTORY_PAGE_SIZE = 8;
+
 const WishlistPage = () => {
   const { token, isAuthenticated, isReady } = useAuth();
+  const [wishlistPage, setWishlistPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const wishlistQuery = useQuery({
     queryKey: ["wishlist", token],
@@ -47,6 +83,33 @@ const WishlistPage = () => {
     queryFn: () => api.history(token as string),
     enabled: Boolean(token),
   });
+
+  const wishlistTotalPages = Math.max(
+    1,
+    Math.ceil((wishlistQuery.data?.length ?? 0) / WISHLIST_PAGE_SIZE),
+  );
+  const historyTotalPages = Math.max(
+    1,
+    Math.ceil((historyQuery.data?.length ?? 0) / HISTORY_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    setWishlistPage((current) => Math.min(current, wishlistTotalPages));
+  }, [wishlistTotalPages]);
+
+  useEffect(() => {
+    setHistoryPage((current) => Math.min(current, historyTotalPages));
+  }, [historyTotalPages]);
+
+  const pagedWishlistItems = useMemo(() => {
+    const start = (wishlistPage - 1) * WISHLIST_PAGE_SIZE;
+    return (wishlistQuery.data ?? []).slice(start, start + WISHLIST_PAGE_SIZE);
+  }, [wishlistPage, wishlistQuery.data]);
+
+  const pagedHistoryItems = useMemo(() => {
+    const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+    return (historyQuery.data ?? []).slice(start, start + HISTORY_PAGE_SIZE);
+  }, [historyPage, historyQuery.data]);
 
   if (!isReady) {
     return (
@@ -83,7 +146,7 @@ const WishlistPage = () => {
           <p className="text-muted-foreground">Đang tải danh sách đã lưu...</p>
         ) : null}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-          {wishlistQuery.data?.map((item) => (
+          {pagedWishlistItems.map((item) => (
             <MovieCard
               key={item.movieSlug}
               movie={{
@@ -99,6 +162,13 @@ const WishlistPage = () => {
             />
           ))}
         </div>
+        {wishlistQuery.data?.length ? (
+          <PaginationControls
+            currentPage={wishlistPage}
+            totalPages={wishlistTotalPages}
+            onPageChange={setWishlistPage}
+          />
+        ) : null}
       </section>
 
       <section className="space-y-5 rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
@@ -133,20 +203,23 @@ const WishlistPage = () => {
           </div>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {historyQuery.data?.map((item) => (
-            <article
+        <div className="space-y-4">
+          {pagedHistoryItems.map((item) => (
+            <Link
               key={item.id}
-              className="group overflow-hidden rounded-[28px] border border-white/10 bg-black/25 transition-all duration-300 hover:border-primary/35 hover:bg-black/35"
+              to={buildWatchUrl(
+                item.movieSlug,
+                item.lastServerIndex ?? undefined,
+                item.lastEpisodeIndex ?? undefined,
+                item.id,
+              )}
+              className="group block overflow-hidden rounded-[28px] border border-white/10 bg-black/25 transition-all duration-300 hover:border-primary/35 hover:bg-black/35"
             >
-              <div className="flex min-h-[220px]">
-                <Link
-                  to={`/movie/${item.movieSlug}`}
-                  className="relative w-[132px] flex-none overflow-hidden bg-black/40"
-                >
-                  {item.posterUrl || item.thumbUrl ? (
+              <div className="flex min-h-[168px] flex-col md:min-h-[152px] md:flex-row">
+                <div className="relative h-[180px] w-full flex-none overflow-hidden bg-black/40 md:h-auto md:w-[270px]">
+                  {item.thumbUrl || item.posterUrl ? (
                     <img
-                      src={item.posterUrl || item.thumbUrl || ""}
+                      src={item.thumbUrl || item.posterUrl || ""}
                       alt={item.movieName}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -156,10 +229,10 @@ const WishlistPage = () => {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                </Link>
+                </div>
 
                 <div className="flex min-w-0 flex-1 flex-col justify-between p-5">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-white/70">
                       {item.lang ? (
                         <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 uppercase tracking-[0.2em]">
@@ -174,11 +247,9 @@ const WishlistPage = () => {
                     </div>
 
                     <div>
-                      <Link to={`/movie/${item.movieSlug}`} className="block">
-                        <h3 className="line-clamp-2 text-lg font-bold text-white transition-colors group-hover:text-primary">
-                          {item.movieName}
-                        </h3>
-                      </Link>
+                      <h3 className="line-clamp-2 text-lg font-bold text-white transition-colors group-hover:text-primary">
+                        {item.movieName}
+                      </h3>
                       {item.originName ? (
                         <p className="mt-1 line-clamp-1 text-sm text-white/45">
                           {item.originName}
@@ -186,13 +257,29 @@ const WishlistPage = () => {
                       ) : null}
                     </div>
 
-                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                      <p className="text-sm font-semibold text-white">
-                        {item.lastEpisodeName || "Đã mở chi tiết phim"}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatWatchProgress(item.lastPositionSeconds)}
-                      </p>
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-white">
+                          {item.lastEpisodeName || "Đã mở chi tiết phim"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatWatchProgress(item.lastPositionSeconds)}
+                          {formatDuration(item.durationSeconds)
+                            ? ` / ${formatDuration(item.durationSeconds)}`
+                            : ""}
+                        </p>
+                      </div>
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-red-500 transition-[width] duration-300"
+                          style={{
+                            width: `${resolveProgressPercent(
+                              item.lastPositionSeconds,
+                              item.durationSeconds,
+                            )}%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -201,20 +288,22 @@ const WishlistPage = () => {
                       <Clock3 className="h-3.5 w-3.5" />
                       <span>{formatHistoryTime(item.updatedAt)}</span>
                     </div>
-
-                    <Link
-                      to={buildWatchUrl(item.movieSlug)}
-                      className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-                    >
-                      <Play className="h-4 w-4 fill-current" />
-                      Xem tiếp
-                    </Link>
+                    <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">
+                      Tự động tiếp tục
+                    </span>
                   </div>
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
+        {historyQuery.data?.length ? (
+          <PaginationControls
+            currentPage={historyPage}
+            totalPages={historyTotalPages}
+            onPageChange={setHistoryPage}
+          />
+        ) : null}
       </section>
     </div>
   );

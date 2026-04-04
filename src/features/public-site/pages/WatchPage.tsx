@@ -41,6 +41,22 @@ const findEpisodeSelectionByName = (
 const stripHtml = (value: unknown) =>
   typeof value === "string" ? value.replace(/<[^>]+>/g, "").trim() : "";
 
+const appendAutoplayParam = (url: string | undefined) => {
+  if (!url) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("autoplay", "1");
+    parsed.searchParams.set("autoPlay", "1");
+    return parsed.toString();
+  } catch {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}autoplay=1&autoPlay=1`;
+  }
+};
+
 const WatchPage = () => {
   const { slug = "" } = useParams();
   const navigate = useNavigate();
@@ -65,12 +81,20 @@ const WatchPage = () => {
   const movie = movieQuery.data?.movie;
   const rawMovie = movieQuery.data?.raw?.movie as Record<string, unknown> | undefined;
   const episodes = movieQuery.data?.episodes ?? [];
-  const historyEntry = historyQuery.data?.find((item) => item.movieSlug === slug) ?? null;
 
+  const historyIdParam = (() => {
+    const parsed = Number(searchParams.get("historyId"));
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  })();
   const selectedServerIndex = parseIndex(searchParams.get("server"));
   const selectedEpisodeIndex = parseIndex(searchParams.get("episode"));
   const hasExplicitServer = searchParams.has("server");
   const hasExplicitEpisode = searchParams.has("episode");
+  const movieHistoryEntries = useMemo(
+    () => (historyQuery.data ?? []).filter((item) => item.movieSlug === slug),
+    [historyQuery.data, slug],
+  );
+  const latestMovieHistoryEntry = movieHistoryEntries[0] ?? null;
 
   const activeSelection = useMemo(() => {
     const firstServerIndex = episodes.findIndex((server) => (server.server_data?.length ?? 0) > 0);
@@ -80,7 +104,7 @@ const WatchPage = () => {
 
     const resumedSelection =
       !hasExplicitServer && !hasExplicitEpisode
-        ? findEpisodeSelectionByName(episodes, historyEntry?.lastEpisodeName)
+        ? findEpisodeSelectionByName(episodes, latestMovieHistoryEntry?.lastEpisodeName)
         : null;
 
     const preferredServerIndex =
@@ -108,7 +132,58 @@ const WatchPage = () => {
     episodes,
     hasExplicitEpisode,
     hasExplicitServer,
-    historyEntry?.lastEpisodeName,
+    latestMovieHistoryEntry?.lastEpisodeName,
+    selectedEpisodeIndex,
+    selectedServerIndex,
+  ]);
+
+  const currentEpisodeLabel = useMemo(
+    () =>
+      activeSelection
+        ? getEpisodeLabel(activeSelection.episode.name, activeSelection.episodeIndex)
+        : null,
+    [activeSelection],
+  );
+
+  const activeHistoryEntry = useMemo(() => {
+    if (!movieHistoryEntries.length) {
+      return null;
+    }
+
+    if (historyIdParam) {
+      return movieHistoryEntries.find((item) => item.id === historyIdParam) ?? null;
+    }
+
+    if (hasExplicitServer || hasExplicitEpisode) {
+      const byIndices = movieHistoryEntries.find(
+        (item) =>
+          item.lastServerIndex === selectedServerIndex &&
+          item.lastEpisodeIndex === selectedEpisodeIndex,
+      );
+
+      if (byIndices) {
+        return byIndices;
+      }
+    }
+
+    if (currentEpisodeLabel) {
+      const byName = movieHistoryEntries.find(
+        (item) => item.lastEpisodeName === currentEpisodeLabel,
+      );
+
+      if (byName) {
+        return byName;
+      }
+    }
+
+    return latestMovieHistoryEntry;
+  }, [
+    currentEpisodeLabel,
+    hasExplicitEpisode,
+    hasExplicitServer,
+    historyIdParam,
+    latestMovieHistoryEntry,
+    movieHistoryEntries,
     selectedEpisodeIndex,
     selectedServerIndex,
   ]);
@@ -153,20 +228,19 @@ const WatchPage = () => {
       year: movie.year ? String(movie.year) : null,
       lastEpisodeName: getEpisodeLabel(activeSelection.episode.name, activeSelection.episodeIndex),
       lastPositionSeconds:
-        historyEntry?.lastEpisodeName ===
+        activeHistoryEntry?.lastEpisodeName ===
         getEpisodeLabel(activeSelection.episode.name, activeSelection.episodeIndex)
-          ? historyEntry.lastPositionSeconds ?? 0
+          ? activeHistoryEntry.lastPositionSeconds ?? 0
           : 0,
+      lastServerIndex: activeSelection.serverIndex,
+      lastEpisodeIndex: activeSelection.episodeIndex,
+      durationSeconds: activeHistoryEntry?.durationSeconds ?? null,
     });
-  }, [activeSelection, historyEntry, movie, token]);
+  }, [activeHistoryEntry, activeSelection, movie, token]);
 
   useEffect(() => {
     const video = videoRef.current;
     const currentEpisode = activeSelection?.episode;
-    const currentEpisodeLabel =
-      currentEpisode && activeSelection
-        ? getEpisodeLabel(currentEpisode.name, activeSelection.episodeIndex)
-        : null;
 
     setPlaybackError(null);
 
@@ -176,6 +250,11 @@ const WatchPage = () => {
 
     let hls: Hls | null = null;
     let lastSavedPosition = -1;
+
+    const attemptAutoplay = () => {
+      void video.play().catch(() => {
+      });
+    };
 
     const persistProgress = () => {
       if (!token || !movie || !activeSelection) {
@@ -200,16 +279,21 @@ const WatchPage = () => {
         year: movie.year ? String(movie.year) : null,
         lastEpisodeName: currentEpisodeLabel,
         lastPositionSeconds: position,
+        lastServerIndex: activeSelection.serverIndex,
+        lastEpisodeIndex: activeSelection.episodeIndex,
+        durationSeconds: Number.isFinite(video.duration)
+          ? Math.floor(video.duration)
+          : activeHistoryEntry?.durationSeconds ?? null,
       });
     };
 
     const restoreProgress = () => {
-      if (!currentEpisodeLabel || !historyEntry?.lastPositionSeconds) {
+      if (!currentEpisodeLabel || !activeHistoryEntry?.lastPositionSeconds) {
         resumeKeyRef.current = `${slug}:${activeSelection.serverIndex}:${activeSelection.episodeIndex}`;
         return;
       }
 
-      if (historyEntry.lastEpisodeName !== currentEpisodeLabel) {
+      if (activeHistoryEntry.lastEpisodeName !== currentEpisodeLabel) {
         resumeKeyRef.current = `${slug}:${activeSelection.serverIndex}:${activeSelection.episodeIndex}`;
         return;
       }
@@ -221,9 +305,9 @@ const WatchPage = () => {
 
       const duration = Number.isFinite(video.duration) ? video.duration : null;
       const safePosition =
-        duration && historyEntry.lastPositionSeconds >= duration - 3
+        duration && activeHistoryEntry.lastPositionSeconds >= duration - 3
           ? Math.max(duration - 8, 0)
-          : historyEntry.lastPositionSeconds;
+          : activeHistoryEntry.lastPositionSeconds;
 
       video.currentTime = safePosition;
       lastSavedPosition = Math.floor(safePosition);
@@ -232,6 +316,7 @@ const WatchPage = () => {
 
     const handleLoadedMetadata = () => {
       restoreProgress();
+      attemptAutoplay();
     };
 
     const handleTimeUpdate = () => {
@@ -255,6 +340,9 @@ const WatchPage = () => {
       }
     };
 
+    video.autoplay = true;
+    video.playsInline = true;
+
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("pause", handlePause);
@@ -265,6 +353,9 @@ const WatchPage = () => {
       hls = new Hls();
       hls.loadSource(currentEpisode.link_m3u8);
       hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        attemptAutoplay();
+      });
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
           setPlaybackError("Không thể phát luồng m3u8 trên trình duyệt này.");
@@ -272,6 +363,7 @@ const WatchPage = () => {
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = currentEpisode.link_m3u8;
+      attemptAutoplay();
     } else {
       setPlaybackError("Trình duyệt không hỗ trợ phát luồng m3u8.");
     }
@@ -292,7 +384,7 @@ const WatchPage = () => {
         video.load();
       }
     };
-  }, [activeSelection, historyEntry, movie, slug, token]);
+  }, [activeHistoryEntry, activeSelection, currentEpisodeLabel, movie, slug, token]);
 
   if (movieQuery.isLoading) {
     return (
@@ -353,11 +445,12 @@ const WatchPage = () => {
               ref={videoRef}
               controls
               playsInline
+              autoPlay
               className="h-full w-full bg-black"
             />
           ) : episode.link_embed ? (
             <iframe
-              src={episode.link_embed}
+              src={appendAutoplayParam(episode.link_embed)}
               title={`${movie.name} - ${episode.name || `Tập ${episodeIndex + 1}`}`}
               className="h-full w-full"
               allow="autoplay; fullscreen; picture-in-picture"

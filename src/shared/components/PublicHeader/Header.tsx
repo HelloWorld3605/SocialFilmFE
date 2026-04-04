@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Film, Heart, LogOut, Menu, Search, User, X } from "lucide-react";
+import { ChevronDown, Heart, LogOut, Menu, Search, User, X } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 
@@ -211,10 +211,7 @@ export function Header({ overlay = false }: HeaderProps) {
       }`}
     >
       <div className="layout-padding flex h-20 w-full items-center gap-4">
-        <Link to="/" className="min-w-0 shrink-0 flex items-center gap-3">
-          <div className="rounded-2xl bg-primary/15 p-2 text-primary">
-            <Film className="h-7 w-7" />
-          </div>
+        <Link to="/" className="min-w-0 shrink-0">
           <div className="min-w-0">
             <p
               className="text-2xl font-bold tracking-wider text-primary"

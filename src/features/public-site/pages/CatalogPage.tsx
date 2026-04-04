@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Check,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -14,6 +12,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "@/shared/lib/api";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
 import PageNavigation from "@/shared/components/PageNavigation";
+import PaginationControls from "@/shared/components/PaginationControls";
 
 const validTypes = ["phim-bo", "phim-le", "tv-shows", "hoat-hinh"] as const;
 
@@ -352,7 +351,19 @@ const CatalogPage = () => {
     setSearchParams(next);
   };
 
-  const totalPages = listQuery.data?.totalPages ?? 1;
+  const rawPagination = (listQuery.data?.raw as any)?.data?.params?.pagination;
+  const displayCurrentPage = Number(
+    rawPagination?.currentPage ?? listQuery.data?.page ?? page ?? 1,
+  );
+  const displayTotalItems = Number(
+    rawPagination?.totalItems ?? listQuery.data?.totalItems ?? 0,
+  );
+  const displayTotalPages = Math.max(
+    Number(rawPagination?.totalPages ?? 0),
+    Number(listQuery.data?.totalPages ?? 0),
+    Math.ceil(displayTotalItems / 24),
+    1,
+  );
 
   return (
     <div className="content-shell layout-padding py-10">
@@ -365,7 +376,7 @@ const CatalogPage = () => {
         ]}
       />
 
-      <div className="mb-8 overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.12),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]">
+      <div className="mb-8 rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.12),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]">
         <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
@@ -373,15 +384,11 @@ const CatalogPage = () => {
               Danh mục phim
             </div>
             <h1 className="mt-3 text-3xl font-black text-white">{title}</h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Chọn sẵn thể loại, quốc gia, năm phát hành và kiểu phụ đề để lọc nhanh.
-              Chỉ ô từ khóa mới cần tự nhập.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white">
-              {listQuery.data?.totalItems ?? 0} phim
+              {displayTotalItems} phim • {displayTotalPages} trang
             </div>
             <button
               type="button"
@@ -541,38 +548,31 @@ const CatalogPage = () => {
           {(listQuery.error as Error).message || "Không thể tải danh mục phim."}
         </p>
       ) : null}
+      {listQuery.data && displayTotalPages > 1 ? (
+        <PaginationControls
+          className="mb-6"
+          currentPage={displayCurrentPage}
+          totalPages={displayTotalPages}
+          onPageChange={(nextPage) =>
+            updateParams({ page: String(nextPage) }, { resetPage: false })
+          }
+        />
+      ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {listQuery.data?.items.map((movie) => (
           <MovieCard key={movie.slug} movie={movie} />
         ))}
       </div>
 
-      {listQuery.data && totalPages > 1 ? (
-        <div className="mt-10 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-muted-foreground">
-            Trang {listQuery.data.page} / {totalPages}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => updateParams({ page: String(page - 1) }, { resetPage: false })}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm text-white transition-colors hover:border-primary/40 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Trang trước
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => updateParams({ page: String(page + 1) }, { resetPage: false })}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2.5 text-sm text-white transition-colors hover:border-primary/40 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Trang sau
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      {listQuery.data && displayTotalPages > 1 ? (
+        <PaginationControls
+          className="mt-10"
+          currentPage={displayCurrentPage}
+          totalPages={displayTotalPages}
+          onPageChange={(nextPage) =>
+            updateParams({ page: String(nextPage) }, { resetPage: false })
+          }
+        />
       ) : null}
     </div>
   );

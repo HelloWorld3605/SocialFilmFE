@@ -91,6 +91,9 @@ export interface WatchHistoryItem {
   year?: string | null;
   lastEpisodeName?: string | null;
   lastPositionSeconds?: number | null;
+  lastServerIndex?: number | null;
+  lastEpisodeIndex?: number | null;
+  durationSeconds?: number | null;
   updatedAt: string;
 }
 

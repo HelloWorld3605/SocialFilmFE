@@ -152,6 +152,9 @@ export const api = {
       year?: string | null;
       lastEpisodeName?: string | null;
       lastPositionSeconds?: number | null;
+      lastServerIndex?: number | null;
+      lastEpisodeIndex?: number | null;
+      durationSeconds?: number | null;
     },
   ) => request<WatchHistoryItem>("/history", { method: "POST", body: payload, token }),
 };
