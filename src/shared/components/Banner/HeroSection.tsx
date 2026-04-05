@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Play,
   Plus,
   ChevronLeft,
   ChevronRight,
-  Clapperboard,
-  Globe2,
-  Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MovieSummary } from "@/shared/types/api";
@@ -56,27 +53,6 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
   }, [activeIndex]);
 
   const activeMovie = movies[Math.min(activeIndex, Math.max(movies.length - 1, 0))] ?? null;
-
-  const heroFacts = useMemo(() => {
-    if (!activeMovie) {
-      return [];
-    }
-
-    return [
-      {
-        icon: Sparkles,
-        label: activeMovie.quality || "HD",
-      },
-      {
-        icon: Clapperboard,
-        label: activeMovie.episodeCurrent || "Đang cập nhật",
-      },
-      {
-        icon: Globe2,
-        label: activeMovie.lang || "Vietsub",
-      },
-    ];
-  }, [activeMovie?.episodeCurrent, activeMovie?.lang, activeMovie?.quality]);
 
   if (!activeMovie) {
     return (
@@ -134,29 +110,6 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                 <h2 className="max-w-3xl text-3xl font-black leading-[0.94] tracking-tight text-foreground text-shadow-hero md:text-4xl lg:text-5xl">
                   {activeMovie.name}
                 </h2>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                {heroFacts.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.label}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm text-white/88 backdrop-blur-xl"
-                    >
-                      <Icon className="h-4 w-4 text-primary" />
-                      <span>{item.label}</span>
-                    </div>
-                  );
-                })}
-                {(activeMovie.categories ?? []).slice(0, 2).map((category) => (
-                  <div
-                    key={category}
-                    className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-4 py-2 text-sm text-white/72 backdrop-blur-xl"
-                  >
-                    {category}
-                  </div>
-                ))}
               </div>
 
               <div className="flex items-center gap-3 pt-1">
