@@ -28,11 +28,11 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/lib/api";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { buildWatchUrl } from "@/shared/lib/watch";
-import type { EpisodeServer } from "@/shared/types/api";
+import type { EpisodeServer, WatchHistoryItem } from "@/shared/types/api";
 import PageNavigation from "@/shared/components/PageNavigation";
 import {
   DropdownMenu,
@@ -103,6 +103,14 @@ const appendAutoplayParam = (url: string | undefined) => {
 
 const PLAYBACK_SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
 
+type SaveHistoryReason =
+  | "EMBED_OPEN"
+  | "PERIODIC"
+  | "PAUSE"
+  | "ENDED"
+  | "BACKGROUND"
+  | "EXIT";
+
 const formatPlayerTime = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     return "0:00";
@@ -118,6 +126,38 @@ const formatPlayerTime = (seconds: number) => {
   }
 
   return `${minutes}:${String(remainSeconds).padStart(2, "0")}`;
+};
+
+const getHistoryUpdatedAtValue = (item: WatchHistoryItem) => {
+  const timestamp = Date.parse(item.updatedAt);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const upsertHistoryCacheItem = (
+  current: WatchHistoryItem[] | undefined,
+  nextItem: WatchHistoryItem,
+) => {
+  const nextEpisodeName = nextItem.lastEpisodeName ?? null;
+  return [nextItem, ...(current ?? [])]
+    .filter(
+      (item, index, items) =>
+        items.findIndex(
+          (candidate) =>
+            candidate.id === item.id ||
+            (candidate.movieSlug === item.movieSlug &&
+              (candidate.lastEpisodeName ?? null) ===
+                (item.lastEpisodeName ?? null)),
+        ) === index,
+    )
+    .sort((left, right) => {
+      const updatedAtDiff =
+        getHistoryUpdatedAtValue(right) - getHistoryUpdatedAtValue(left);
+      if (updatedAtDiff !== 0) {
+        return updatedAtDiff;
+      }
+
+      return right.id - left.id;
+    });
 };
 
 interface PlayerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -210,12 +250,17 @@ const WatchPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { token } = useAuth();
+  const queryClient = useQueryClient();
   const preferredQualityRef = useRef(-1);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const isWatchPageMountedRef = useRef(true);
   const resumeKeyRef = useRef<string | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const controlsHideTimeoutRef = useRef<number | null>(null);
+  const persistProgressRef = useRef<
+    ((reason?: SaveHistoryReason, options?: { keepalive?: boolean }) => void) | null
+  >(null);
   const lastVolumeRef = useRef(1);
   const isProgressScrubbingRef = useRef(false);
   const progressWasPlayingRef = useRef(false);
@@ -333,6 +378,13 @@ const WatchPage = () => {
     [activeSelection],
   );
   const prefersInternalPlayer = Boolean(activeSelection?.episode?.link_m3u8);
+
+  useEffect(
+    () => () => {
+      isWatchPageMountedRef.current = false;
+    },
+    [],
+  );
 
   const clearControlsHideTimer = () => {
     if (controlsHideTimeoutRef.current !== null) {
@@ -518,6 +570,7 @@ const WatchPage = () => {
       lastServerIndex: activeSelection.serverIndex,
       lastEpisodeIndex: activeSelection.episodeIndex,
       durationSeconds: activeHistoryEntry?.durationSeconds ?? null,
+      saveReason: "EMBED_OPEN",
     });
   }, [activeHistoryEntry, activeSelection, movie, token]);
 
@@ -566,7 +619,10 @@ const WatchPage = () => {
       void video.play().catch(() => {});
     };
 
-    const persistProgress = () => {
+    const persistProgress = (
+      reason: SaveHistoryReason = "PERIODIC",
+      options?: { keepalive?: boolean },
+    ) => {
       if (!token || !movie || !activeSelection) {
         return;
       }
@@ -578,7 +634,7 @@ const WatchPage = () => {
 
       lastSavedPosition = position;
 
-      void api.saveHistory(token, {
+      const payload = {
         movieSlug: movie.slug,
         movieName: movie.name,
         originName: movie.originName,
@@ -594,8 +650,27 @@ const WatchPage = () => {
         durationSeconds: Number.isFinite(video.duration)
           ? Math.floor(video.duration)
           : (activeHistoryEntry?.durationSeconds ?? null),
-      });
+        saveReason: reason,
+      } as const;
+
+      void api
+        .saveHistory(token, payload, options)
+        .then((savedHistoryItem) => {
+          if (!isWatchPageMountedRef.current) {
+            queryClient.setQueryData<WatchHistoryItem[]>(
+              ["history", token],
+              (current) => upsertHistoryCacheItem(current, savedHistoryItem),
+            );
+          }
+        })
+        .catch(() => {
+          if (!isWatchPageMountedRef.current) {
+            void queryClient.invalidateQueries({ queryKey: ["history", token] });
+          }
+        });
     };
+
+    persistProgressRef.current = persistProgress;
 
     const restoreProgress = () => {
       if (!currentEpisodeLabel || !activeHistoryEntry?.lastPositionSeconds) {
@@ -637,7 +712,7 @@ const WatchPage = () => {
 
       const position = Math.floor(video.currentTime || 0);
       if (position >= 5 && position - lastSavedPosition >= 5) {
-        persistProgress();
+        persistProgress("PERIODIC");
       }
     };
 
@@ -647,12 +722,12 @@ const WatchPage = () => {
 
     const handlePause = () => {
       setIsPlaying(false);
-      persistProgress();
+      persistProgress("PAUSE");
     };
 
     const handleEnded = () => {
       setIsPlaying(false);
-      persistProgress();
+      persistProgress("ENDED");
     };
 
     const handleDurationChange = () => {
@@ -668,12 +743,12 @@ const WatchPage = () => {
     };
 
     const handleBeforeUnload = () => {
-      persistProgress();
+      persistProgress("EXIT", { keepalive: true });
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        persistProgress();
+        persistProgress("BACKGROUND", { keepalive: true });
       }
     };
 
@@ -747,7 +822,8 @@ const WatchPage = () => {
     }
 
     return () => {
-      persistProgress();
+      persistProgressRef.current = null;
+      persistProgress("EXIT", { keepalive: true });
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("play", handlePlay);
@@ -925,6 +1001,7 @@ const WatchPage = () => {
     }
 
     seekTo((video.currentTime || 0) + seconds);
+    persistProgressRef.current?.("PERIODIC");
   };
 
   const handleProgressChange = (targetTime: number) => {
@@ -941,6 +1018,7 @@ const WatchPage = () => {
     }
 
     seekTo(targetTime);
+    persistProgressRef.current?.("PERIODIC");
   };
 
   const handleVolumeChange = (value: number) => {
@@ -1060,10 +1138,17 @@ const WatchPage = () => {
           }}
           onMouseLeave={() => {
             setIsPointerOverPlayer(false);
-            if (!isFullscreen && !isSettingsOpen && !isInteractingWithControls) {
+            if (isSettingsOpen || isInteractingWithControls) {
+              return;
+            }
+
+            if (!isFullscreen) {
               clearControlsHideTimer();
               setAreControlsVisible(false);
+              return;
             }
+
+            startControlsHideTimer();
           }}
           onTouchStart={revealControls}
         >
@@ -1077,7 +1162,9 @@ const WatchPage = () => {
                   preload="auto"
                   className={cn(
                     "h-full w-full cursor-pointer bg-black object-cover transition-[filter] duration-200 ease-out motion-reduce:transition-none",
-                    isProgressScrubbing ? "brightness-[0.72] saturate-75" : "brightness-100",
+                    isProgressScrubbing
+                      ? "brightness-[0.72] saturate-75"
+                      : "brightness-100",
                   )}
                   onClick={togglePlayback}
                 />
@@ -1094,7 +1181,9 @@ const WatchPage = () => {
               <div
                 className={cn(
                   "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-3 transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] sm:p-5",
-                  showPlayerChrome ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0",
+                  showPlayerChrome
+                    ? "translate-y-0 opacity-100"
+                    : "-translate-y-3 opacity-0",
                 )}
               >
                 <div className="rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-xl">
@@ -1136,7 +1225,10 @@ const WatchPage = () => {
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <PlayerButton onClick={() => seekBy(-10)} title="Lùi 10 giây">
+                      <PlayerButton
+                        onClick={() => seekBy(-10)}
+                        title="Lùi 10 giây"
+                      >
                         <RotateCcw className="h-4 w-4" />
                       </PlayerButton>
                       <PlayerButton
@@ -1150,7 +1242,10 @@ const WatchPage = () => {
                           <Play className="ml-0.5 h-5 w-5 fill-current" />
                         )}
                       </PlayerButton>
-                      <PlayerButton onClick={() => seekBy(10)} title="Tua tới 10 giây">
+                      <PlayerButton
+                        onClick={() => seekBy(10)}
+                        title="Tua tới 10 giây"
+                      >
                         <RotateCw className="h-4 w-4" />
                       </PlayerButton>
 
@@ -1177,7 +1272,8 @@ const WatchPage = () => {
                     </div>
 
                     <div className="order-3 w-full text-center text-xs font-medium text-white/75 sm:order-2 sm:w-auto sm:text-sm">
-                      {formatPlayerTime(currentTime)} / {formatPlayerTime(duration)}
+                      {formatPlayerTime(currentTime)} /{" "}
+                      {formatPlayerTime(duration)}
                     </div>
 
                     <div className="order-2 flex items-center gap-2 sm:order-3">
@@ -1191,11 +1287,17 @@ const WatchPage = () => {
                       </button>
 
                       <DropdownMenu
+                        modal={false}
                         onOpenChange={(open) => {
                           setIsSettingsOpen(open);
                           if (open) {
-                            revealControls();
+                            beginControlsInteraction();
+                            setAreControlsVisible(true);
+                            clearControlsHideTimer();
+                            return;
                           }
+
+                          endControlsInteraction();
                         }}
                       >
                         <DropdownMenuTrigger asChild>
@@ -1217,7 +1319,9 @@ const WatchPage = () => {
                               onSelect={() => changePlaybackRate(rate)}
                               className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                             >
-                              <span>{rate === 1 ? "Bình thường" : `${rate}x`}</span>
+                              <span>
+                                {rate === 1 ? "Bình thường" : `${rate}x`}
+                              </span>
                               {playbackRate === rate ? (
                                 <Check className="ml-auto h-4 w-4 text-red-400" />
                               ) : null}
@@ -1258,7 +1362,9 @@ const WatchPage = () => {
 
                       <PlayerButton
                         onClick={toggleFullscreen}
-                        title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
+                        title={
+                          isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"
+                        }
                       >
                         {isFullscreen ? (
                           <Minimize className="h-4 w-4" />

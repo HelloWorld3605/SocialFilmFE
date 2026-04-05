@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Heart, LogOut, Menu, Search, User, X } from "lucide-react";
+import { ChevronDown, Heart, LogOut, Menu, Search, Settings2, User, X } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 import type { MovieSummary } from "@/shared/types/api";
@@ -754,7 +754,7 @@ export function Header({ overlay = false }: HeaderProps) {
                   />
                 </button>
                 {userMenuOpen ? (
-                  <div className="absolute right-0 top-full z-30 mt-3 w-48 rounded-2xl border border-white/10 bg-black/90 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                  <div className="absolute right-0 top-full z-30 mt-3 w-52 rounded-2xl border border-white/10 bg-black/90 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl">
                     <Link
                       to="/profile"
                       onClick={() => setUserMenuOpen(false)}
@@ -762,6 +762,14 @@ export function Header({ overlay = false }: HeaderProps) {
                     >
                       <User className="h-4 w-4 shrink-0" />
                       <span>Hồ sơ</span>
+                    </Link>
+                    <Link
+                      to="/settings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white transition-colors hover:bg-white/10"
+                    >
+                      <Settings2 className="h-4 w-4 shrink-0" />
+                      <span>Cài đặt</span>
                     </Link>
                     <button
                       onClick={() => {
@@ -912,6 +920,13 @@ export function Header({ overlay = false }: HeaderProps) {
             ))}
             {isAuthenticated ? (
               <>
+                <Link
+                  to="/settings"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-xl bg-white/5 px-4 py-3 text-sm text-white"
+                >
+                  Cài đặt
+                </Link>
                 <Link
                   to="/wishlist"
                   onClick={() => setMobileOpen(false)}

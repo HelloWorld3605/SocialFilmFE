@@ -55,7 +55,8 @@ const HomePage = () => {
     queryKey: ["history", token],
     queryFn: () => api.history(token as string),
     enabled: Boolean(token),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const isInitialLoading = isLoading && !data;
   const hasErrorWithoutData = Boolean(error && !data);

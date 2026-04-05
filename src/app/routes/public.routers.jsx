@@ -13,6 +13,7 @@ const CompleteRegistrationPage = React.lazy(
   () => import("@/features/public-site/pages/CompleteRegistrationPage"),
 );
 const ProfilePage = React.lazy(() => import("@/features/public-site/pages/ProfilePage"));
+const SettingsPage = React.lazy(() => import("@/features/public-site/pages/SettingsPage"));
 const ValidateRegistrationTokenPage = React.lazy(
   () => import("@/features/public-site/pages/ValidateRegistrationTokenPage"),
 );
@@ -56,6 +57,7 @@ const publicRouters = [
         element: withSuspense(<CompleteRegistrationPage />),
       },
       { path: "profile", element: withSuspense(<ProfilePage />) },
+      { path: "settings", element: withSuspense(<SettingsPage />) },
       {
         path: "validate-token/:token",
         element: withSuspense(<ValidateRegistrationTokenPage />),

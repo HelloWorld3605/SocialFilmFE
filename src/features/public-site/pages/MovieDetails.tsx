@@ -1,12 +1,18 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Heart, Plus, Star, Clock, Film } from "lucide-react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Play, Heart, Plus, Star, Clock, Film, Share2 } from "lucide-react";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/shared/lib/api";
 import { useAuth } from "@/shared/auth/AuthContext";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
 import PageNavigation from "@/shared/components/PageNavigation";
+import ShareMovieDialog from "@/shared/components/ShareMovieDialog";
 import { buildWatchUrl } from "@/shared/lib/watch";
 import type { MovieSummary } from "@/shared/types/api";
 
@@ -42,10 +48,14 @@ const extractTaxonomyEntries = (value: unknown) => {
         slug: slug || null,
       };
     })
-    .filter((item): item is { name: string; slug: string | null } => Boolean(item));
+    .filter((item): item is { name: string; slug: string | null } =>
+      Boolean(item),
+    );
 };
 
-const buildRelatedParams = (extra: Record<string, string | number | null | undefined> = {}) => {
+const buildRelatedParams = (
+  extra: Record<string, string | number | null | undefined> = {},
+) => {
   const params = new URLSearchParams({
     page: "1",
     limit: "18",
@@ -69,6 +79,7 @@ const MovieDetail = () => {
   const { token, isAuthenticated } = useAuth();
   const [imageError, setImageError] = useState(false);
   const [showAllActors, setShowAllActors] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const movieQuery = useQuery({
     queryKey: ["movie", slug],
@@ -83,11 +94,15 @@ const MovieDetail = () => {
   });
 
   const movie = movieQuery.data?.movie;
-  const rawMovie = movieQuery.data?.raw?.movie as Record<string, any> | undefined;
+  const rawMovie = movieQuery.data?.raw?.movie as
+    | Record<string, any>
+    | undefined;
   const episodes = movieQuery.data?.episodes ?? [];
 
   const goToEpisodes = () => {
-    document.getElementById("episodes")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("episodes")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const goToWatchPage = (serverIndex = 0, episodeIndex = 0) => {
@@ -120,7 +135,9 @@ const MovieDetail = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wishlist-state", slug, token] });
+      queryClient.invalidateQueries({
+        queryKey: ["wishlist-state", slug, token],
+      });
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });
@@ -210,7 +227,9 @@ const MovieDetail = () => {
   const similarMovies = useMemo(() => {
     if (!movie) return [];
 
-    const currentCategories = new Set(categories.map((category) => category.toLowerCase()));
+    const currentCategories = new Set(
+      categories.map((category) => category.toLowerCase()),
+    );
     const currentCountries = new Set(
       (movie.countries ?? []).map((country) => country.toLowerCase()),
     );
@@ -254,10 +273,14 @@ const MovieDetail = () => {
 
     relatedCategoryQueries.forEach((query, index) => {
       const sourceBoost = index === 0 ? 5 : 4;
-      (query.data?.items ?? []).forEach((item) => applyCandidate(item, sourceBoost));
+      (query.data?.items ?? []).forEach((item) =>
+        applyCandidate(item, sourceBoost),
+      );
     });
 
-    (relatedCountryQuery.data?.items ?? []).forEach((item) => applyCandidate(item, 3));
+    (relatedCountryQuery.data?.items ?? []).forEach((item) =>
+      applyCandidate(item, 3),
+    );
 
     return Array.from(ranked.values())
       .sort(
@@ -301,9 +324,7 @@ const MovieDetail = () => {
           className="h-full w-full object-cover object-[center_15%]"
           onError={() => setImageError(true)}
         />
-        {imageError ? (
-          <div className="absolute inset-0 bg-secondary" />
-        ) : null}
+        {imageError ? <div className="absolute inset-0 bg-secondary" /> : null}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
 
@@ -325,7 +346,8 @@ const MovieDetail = () => {
             </motion.h1>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <span className="flex items-center gap-1.5 rounded-md bg-primary/20 px-3 py-1.5 text-sm font-semibold text-primary">
-                <Star className="h-4 w-4 fill-current" /> {movie.quality || "HD"}
+                <Star className="h-4 w-4 fill-current" />{" "}
+                {movie.quality || "HD"}
               </span>
               <button
                 onClick={() => isAuthenticated && wishlistMutation.mutate()}
@@ -340,6 +362,12 @@ const MovieDetail = () => {
               >
                 <Plus className="h-4 w-4" /> Danh sách tập
               </button>
+              <button
+                onClick={() => setShareDialogOpen(true)}
+                className="flex items-center gap-1.5 rounded-md border border-border bg-secondary/50 px-3 py-1.5 text-sm font-medium text-foreground backdrop-blur-sm transition-colors hover:bg-secondary"
+              >
+                <Share2 className="h-4 w-4" /> Chia sẻ
+              </button>
             </div>
           </div>
         </div>
@@ -349,10 +377,7 @@ const MovieDetail = () => {
         <PageNavigation
           backTo="/"
           backLabel="Trang chủ"
-          items={[
-            { label: "Trang chủ", to: "/" },
-            { label: movie.name },
-          ]}
+          items={[{ label: "Trang chủ", to: "/" }, { label: movie.name }]}
         />
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
@@ -375,13 +400,21 @@ const MovieDetail = () => {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <Heart className="h-4 w-4" />
-                {wishlistQuery.data?.wished ? "Bỏ khỏi danh sách xem sau" : "Xem sau"}
+                {wishlistQuery.data?.wished
+                  ? "Bỏ khỏi danh sách xem sau"
+                  : "Xem sau"}
               </button>
               <button
                 onClick={goToEpisodes}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-secondary py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent"
               >
                 <Plus className="h-4 w-4" /> Danh sách tập
+              </button>
+              <button
+                onClick={() => setShareDialogOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-secondary py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                <Share2 className="h-4 w-4" /> Chia sẻ phim
               </button>
             </div>
           </motion.div>
@@ -396,7 +429,8 @@ const MovieDetail = () => {
               <h2 className="text-3xl font-bold tracking-wide text-foreground">
                 {movie.name}{" "}
                 <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-primary/20 px-2 py-0.5 align-middle text-sm font-semibold text-primary">
-                  <Star className="h-3.5 w-3.5 fill-current" /> {movie.quality || "HD"}
+                  <Star className="h-3.5 w-3.5 fill-current" />{" "}
+                  {movie.quality || "HD"}
                 </span>
               </h2>
               <p className="mt-2 text-muted-foreground">
@@ -405,7 +439,8 @@ const MovieDetail = () => {
 
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" /> {String(rawMovie?.time || "Chưa rõ")}
+                  <Clock className="h-4 w-4" />{" "}
+                  {String(rawMovie?.time || "Chưa rõ")}
                 </span>
                 <span className="h-1 w-1 rounded-full bg-muted-foreground" />
                 {categories.map((category) => (
@@ -445,14 +480,18 @@ const MovieDetail = () => {
                     <span className="min-w-[100px] font-medium text-muted-foreground">
                       Ngôn ngữ:
                     </span>
-                    <span className="text-foreground">{movie.lang || "Vietsub"}</span>
+                    <span className="text-foreground">
+                      {movie.lang || "Vietsub"}
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <span className="min-w-[100px] font-medium text-muted-foreground">
                       Trạng thái:
                     </span>
                     <span className="text-foreground">
-                      {movie.episodeCurrent || rawMovie?.status || "Đang cập nhật"}
+                      {movie.episodeCurrent ||
+                        rawMovie?.status ||
+                        "Đang cập nhật"}
                     </span>
                   </div>
                 </div>
@@ -470,7 +509,9 @@ const MovieDetail = () => {
                         onClick={() => setShowAllActors((current) => !current)}
                         className="text-sm font-semibold text-primary transition-colors hover:text-primary/80"
                       >
-                        {showAllActors ? "Thu gọn" : `Xem thêm (${actors.length - 6})`}
+                        {showAllActors
+                          ? "Thu gọn"
+                          : `Xem thêm (${actors.length - 6})`}
                       </button>
                     ) : null}
                   </div>
@@ -481,7 +522,9 @@ const MovieDetail = () => {
                           {actor.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground">{actor}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {actor}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -496,22 +539,23 @@ const MovieDetail = () => {
                   Danh sách tập
                 </h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {episodes.flatMap((server, serverIndex) =>
-                    server.server_data?.map((episode, index) => (
-                      <button
-                        key={`${server.server_name}-${episode.slug}-${index}`}
-                        type="button"
-                        onClick={() => goToWatchPage(serverIndex, index)}
-                        className="rounded-xl border border-border bg-secondary/40 p-4 transition-colors hover:bg-secondary"
-                      >
-                        <p className="font-semibold text-foreground">
-                          {episode.name || `Tập ${index + 1}`}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {server.server_name || "Nguồn phát"}
-                        </p>
-                      </button>
-                    )) || [],
+                  {episodes.flatMap(
+                    (server, serverIndex) =>
+                      server.server_data?.map((episode, index) => (
+                        <button
+                          key={`${server.server_name}-${episode.slug}-${index}`}
+                          type="button"
+                          onClick={() => goToWatchPage(serverIndex, index)}
+                          className="rounded-xl border border-border bg-secondary/40 p-4 transition-colors hover:bg-secondary"
+                        >
+                          <p className="font-semibold text-foreground">
+                            {episode.name || `Tập ${index + 1}`}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {server.server_name || "Nguồn phát"}
+                          </p>
+                        </button>
+                      )) || [],
                   )}
                 </div>
               </div>
@@ -540,6 +584,18 @@ const MovieDetail = () => {
           </div>
         ) : null}
       </div>
+
+      <ShareMovieDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        movie={{
+          name: movie.name,
+          originName: movie.originName,
+          slug: movie.slug,
+          posterUrl: movie.posterUrl,
+          thumbUrl: movie.thumbUrl,
+        }}
+      />
     </div>
   );
 };

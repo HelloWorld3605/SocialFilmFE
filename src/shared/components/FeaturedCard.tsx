@@ -26,7 +26,7 @@ const FeaturedCard = ({ movie }: FeaturedCardProps) => {
       <img
         src={movie.thumbUrl || movie.posterUrl || ""}
         alt={movie.name}
-        className="h-[420px] w-full object-cover md:h-[500px] lg:h-[560px]"
+        className="h-[500px] w-full object-cover md:h-[900px] lg:h-[980px]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 

@@ -21,6 +21,7 @@ interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
   token?: string | null;
+  keepalive?: boolean;
 }
 
 async function request<T>(
@@ -42,6 +43,7 @@ async function request<T>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
+    keepalive: options.keepalive ?? false,
     body: !options.body
       ? undefined
       : isFormData
@@ -185,12 +187,21 @@ export const api = {
       lastServerIndex?: number | null;
       lastEpisodeIndex?: number | null;
       durationSeconds?: number | null;
+      saveReason?:
+        | "EMBED_OPEN"
+        | "PERIODIC"
+        | "PAUSE"
+        | "ENDED"
+        | "BACKGROUND"
+        | "EXIT";
     },
+    options?: { keepalive?: boolean },
   ) =>
     request<WatchHistoryItem>("/history", {
       method: "POST",
       body: payload,
       token,
+      keepalive: options?.keepalive,
     }),
   removeHistory: (token: string, historyId: number) =>
     request<void>(`/history/${historyId}`, {

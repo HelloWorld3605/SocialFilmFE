@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
 import ConfirmDeleteDialog from "@/shared/components/ConfirmDeleteDialog";
+import ShareMovieDialog from "@/shared/components/ShareMovieDialog";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 import {
@@ -102,6 +103,9 @@ const WishlistPage = () => {
   const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(() =>
     getSkipHistoryDeleteConfirm(),
   );
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareTargetItem, setShareTargetItem] =
+    useState<WatchHistoryItem | null>(null);
 
   const wishlistQuery = useQuery({
     queryKey: ["wishlist", token],
@@ -113,6 +117,8 @@ const WishlistPage = () => {
     queryKey: ["history", token],
     queryFn: () => api.history(token as string),
     enabled: Boolean(token),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const wishlistTotalPages = Math.max(
@@ -240,38 +246,15 @@ const WishlistPage = () => {
     setPendingDeleteItem(null);
   };
 
-  const handleShare = async (item: WatchHistoryItem) => {
-    const shareUrl = new URL(
-      `/movie/${item.movieSlug}`,
-      window.location.origin,
-    ).toString();
-    const shareData = {
-      title: item.movieName,
-      text: item.originName
-        ? `${item.movieName} (${item.originName})`
-        : item.movieName,
-      url: shareUrl,
-    };
+  const openShareDialog = (item: WatchHistoryItem) => {
+    setShareTargetItem(item);
+    setShareDialogOpen(true);
+  };
 
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
-
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success("Đã sao chép liên kết phim.");
-        return;
-      }
-
-      window.open(shareUrl, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-
-      toast.error("Không thể chia sẻ phim lúc này.");
+  const handleShareDialogOpenChange = (open: boolean) => {
+    setShareDialogOpen(open);
+    if (!open) {
+      setShareTargetItem(null);
     }
   };
 
@@ -404,9 +387,7 @@ const WishlistPage = () => {
                     Lưu vào danh sách
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onSelect={() => {
-                      void handleShare(item);
-                    }}
+                    onSelect={() => openShareDialog(item)}
                     disabled={
                       saveToWishlistMutation.isPending ||
                       removeHistoryMutation.isPending
@@ -536,6 +517,22 @@ const WishlistPage = () => {
         onRememberChoiceChange={setRememberChoice}
         onConfirm={handleConfirmRemoveHistory}
         isPending={removeHistoryMutation.isPending}
+      />
+
+      <ShareMovieDialog
+        open={shareDialogOpen}
+        onOpenChange={handleShareDialogOpenChange}
+        movie={
+          shareTargetItem
+            ? {
+                name: shareTargetItem.movieName,
+                originName: shareTargetItem.originName,
+                slug: shareTargetItem.movieSlug,
+                posterUrl: shareTargetItem.posterUrl,
+                thumbUrl: shareTargetItem.thumbUrl,
+              }
+            : null
+        }
       />
     </div>
   );
