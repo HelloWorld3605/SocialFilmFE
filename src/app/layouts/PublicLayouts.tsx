@@ -11,7 +11,7 @@ const PublicLayout = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header overlay={isOverlayHeader} />
-      <main className={isOverlayHeader ? "" : "pt-20"}>
+      <main className={isOverlayHeader ? "" : "pt-16"}>
         <Outlet />
       </main>
       <Footer />

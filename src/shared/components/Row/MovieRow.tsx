@@ -23,7 +23,7 @@ const MovieRow = ({ title, description, movies }: MovieRowProps) => {
   };
 
   return (
-    <section className="relative py-8">
+    <section className="relative pb-6 pt-8">
       <div className="layout-padding mb-6">
         <h2 className="text-2xl font-bold uppercase tracking-wider text-foreground sm:text-3xl">
           {title}
@@ -49,7 +49,7 @@ const MovieRow = ({ title, description, movies }: MovieRowProps) => {
 
         <div
           ref={scrollRef}
-          className="scrollbar-hide flex gap-3 overflow-x-auto layout-padding"
+          className="scrollbar-hide flex gap-3 overflow-x-auto layout-padding pb-3 pt-2"
         >
           {movies.map((movie, index) => (
             <MovieCard key={movie.slug} movie={movie} index={index} />

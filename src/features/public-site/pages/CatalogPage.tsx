@@ -5,14 +5,17 @@ import {
   RotateCcw,
   Search,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "@/shared/lib/api";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
+import MovieCardSkeleton from "@/shared/components/CardFilm/MovieCardSkeleton";
 import PageNavigation from "@/shared/components/PageNavigation";
 import PaginationControls from "@/shared/components/PaginationControls";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 const validTypes = ["phim-bo", "phim-le", "tv-shows", "hoat-hinh"] as const;
 
@@ -104,7 +107,7 @@ interface FilterFieldProps {
 }
 
 const FilterField = ({ label, hint, children }: FilterFieldProps) => (
-  <div className="flex flex-col gap-2 rounded-[24px] border border-white/10 bg-black/25 p-4 backdrop-blur-sm transition-colors focus-within:border-primary/40 focus-within:bg-black/35">
+  <div className="flex flex-col gap-2 rounded-[26px] border border-white/10 bg-black/25 p-4 backdrop-blur-sm transition-colors focus-within:border-primary/40 focus-within:bg-black/35">
     <div className="space-y-1">
       <p className="text-sm font-semibold text-white">{label}</p>
       <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
@@ -156,7 +159,7 @@ const FilterSelect = ({
   const selectedOption = options.find((option) => option.value === value);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={open ? "relative z-40" : "relative z-10"}>
       <FilterField label={label} hint={hint}>
         <button
           type="button"
@@ -167,7 +170,9 @@ const FilterSelect = ({
               : "border-white/10 bg-black/35 text-white hover:border-white/20 hover:bg-black/45"
           }`}
         >
-          <span className={selectedOption ? "text-white" : "text-muted-foreground"}>
+          <span
+            className={selectedOption ? "text-white" : "text-muted-foreground"}
+          >
             {selectedOption?.label ?? placeholder}
           </span>
           <ChevronDown
@@ -179,7 +184,7 @@ const FilterSelect = ({
       </FilterField>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-full z-30 mt-3 overflow-hidden rounded-[24px] border border-white/10 bg-[#0b0b10]/95 p-2 shadow-[0_24px_80px_rgba(0,0,0,0.48)] backdrop-blur-xl">
+        <div className="absolute left-0 right-0 top-full z-40 mt-3 overflow-hidden rounded-[26px] border border-white/10 bg-[#0b0b10]/95 p-2 shadow-[0_24px_80px_rgba(0,0,0,0.48)] backdrop-blur-xl">
           {statusMessage ? (
             <p className="px-3 py-3 text-sm leading-6 text-muted-foreground">
               {statusMessage}
@@ -220,6 +225,24 @@ const FilterSelect = ({
   );
 };
 
+const CatalogGridSkeleton = () => (
+  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+    {Array.from({ length: 24 }).map((_, index) => (
+      <MovieCardSkeleton key={`catalog-skeleton-${index}`} />
+    ))}
+  </div>
+);
+
+const buildDefaultCatalogParams = (type: string) => {
+  const next = new URLSearchParams();
+  next.set("type", type);
+  next.set("page", "1");
+  next.set("limit", "24");
+  next.set("sort_field", "modified.time");
+  next.set("sort_type", "desc");
+  return next;
+};
+
 const CatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const type = searchParams.get("type") || "phim-bo";
@@ -232,6 +255,7 @@ const CatalogPage = () => {
   const sortLang = searchParams.get("sort_lang") || "";
   const page = Number(searchParams.get("page") || "1");
   const [keywordDraft, setKeywordDraft] = useState(keyword);
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog", "categories"],
@@ -251,6 +275,19 @@ const CatalogPage = () => {
     setKeywordDraft(keyword);
   }, [keyword]);
 
+  useEffect(() => {
+    if (!mobileFiltersExpanded) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileFiltersExpanded]);
+
   const listQuery = useQuery({
     queryKey: [
       "catalog",
@@ -263,7 +300,6 @@ const CatalogPage = () => {
       sortType,
       sortLang,
       page,
-      searchParams.toString(),
     ],
     queryFn: () => {
       const params = new URLSearchParams(searchParams);
@@ -271,8 +307,13 @@ const CatalogPage = () => {
       if (!params.get("limit")) params.set("limit", "24");
       if (!params.get("sort_field")) params.set("sort_field", "modified.time");
       if (!params.get("sort_type")) params.set("sort_type", "desc");
-      return keyword ? api.search(params) : api.list(type, params);
+      if (keyword) {
+        return api.search(params);
+      }
+
+      return api.list(type, params);
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const title = useMemo(() => {
@@ -283,12 +324,15 @@ const CatalogPage = () => {
   }, [keyword, type]);
 
   const categoryLabel = useMemo(
-    () => categoriesQuery.data?.find((item) => item.slug === category)?.name ?? null,
+    () =>
+      categoriesQuery.data?.find((item) => item.slug === category)?.name ??
+      null,
     [categoriesQuery.data, category],
   );
 
   const countryLabel = useMemo(
-    () => countriesQuery.data?.find((item) => item.slug === country)?.name ?? null,
+    () =>
+      countriesQuery.data?.find((item) => item.slug === country)?.name ?? null,
     [countriesQuery.data, country],
   );
 
@@ -311,12 +355,14 @@ const CatalogPage = () => {
         year ? `Năm: ${year}` : null,
         sortLang
           ? `Phiên bản: ${
-              sortLanguageOptions.find((item) => item.value === sortLang)?.label ?? sortLang
+              sortLanguageOptions.find((item) => item.value === sortLang)
+                ?.label ?? sortLang
             }`
           : null,
       ].filter((item): item is string => Boolean(item)),
     [categoryLabel, countryLabel, sortLang, year],
   );
+  const activeFilterCount = activeFilterLabels.length + (keyword ? 1 : 0);
 
   const updateParams = (
     updates: Record<string, string>,
@@ -334,6 +380,7 @@ const CatalogPage = () => {
     }
 
     setSearchParams(next);
+    setMobileFiltersExpanded(false);
   };
 
   const handleKeywordSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -342,13 +389,8 @@ const CatalogPage = () => {
   };
 
   const resetFilters = () => {
-    const next = new URLSearchParams();
-    next.set("type", type);
-    next.set("page", "1");
-    next.set("limit", "24");
-    next.set("sort_field", "modified.time");
-    next.set("sort_type", "desc");
-    setSearchParams(next);
+    setSearchParams(buildDefaultCatalogParams(type));
+    setMobileFiltersExpanded(false);
   };
 
   const rawPagination = (listQuery.data?.raw as any)?.data?.params?.pagination;
@@ -364,19 +406,196 @@ const CatalogPage = () => {
     Math.ceil(displayTotalItems / 24),
     1,
   );
+  const listItems = listQuery.data?.items ?? [];
+  const isInitialListLoading = listQuery.isLoading && listItems.length === 0;
+  const isRefreshingList = listQuery.isFetching && !isInitialListLoading;
+  const hasActiveFilters = Boolean(keyword || activeFilterLabels.length);
+  const filterControls = (
+    <>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <FilterSelect
+          label="Loại phim"
+          hint="Chọn nhóm nội dung bạn muốn duyệt trong kho phim."
+          value={type}
+          onChange={(nextValue) => updateParams({ type: nextValue })}
+          placeholder="Chọn loại phim"
+          options={validTypes.map((item) => ({
+            value: item,
+            label: typeLabels[item],
+          }))}
+        />
+
+        <FilterField
+          label="Từ khóa tìm kiếm"
+          hint="Nhập tên phim, diễn viên hoặc cụm từ gần đúng rồi bấm áp dụng."
+        >
+          <form onSubmit={handleKeywordSubmit} className="flex gap-2">
+            <input
+              value={keywordDraft}
+              onChange={(event) => setKeywordDraft(event.target.value)}
+              placeholder="Ví dụ: One Piece, Thành Long..."
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/40 placeholder:text-muted-foreground"
+            />
+            <button
+              type="submit"
+              className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              <Search className="h-4 w-4" />
+              Áp dụng
+            </button>
+          </form>
+        </FilterField>
+
+        <FilterSelect
+          label="Thể loại"
+          hint="Chọn trực tiếp từ danh sách, không cần nhớ hay nhập mã thể loại."
+          value={category}
+          onChange={(nextValue) => updateParams({ category: nextValue })}
+          placeholder="Tất cả thể loại"
+          statusMessage={
+            categoriesQuery.isLoading
+              ? "Đang tải danh sách thể loại..."
+              : categoriesQuery.error
+                ? "Không tải được danh sách thể loại."
+                : null
+          }
+          options={[
+            { value: "", label: "Tất cả thể loại" },
+            ...(categoriesQuery.data ?? []).map((item) => ({
+              value: item.slug,
+              label: item.name,
+            })),
+          ]}
+        />
+
+        <FilterSelect
+          label="Quốc gia"
+          hint="Lọc theo nơi sản xuất phim, đã có sẵn danh sách chuẩn để chọn."
+          value={country}
+          onChange={(nextValue) => updateParams({ country: nextValue })}
+          placeholder="Tất cả quốc gia"
+          statusMessage={
+            countriesQuery.isLoading
+              ? "Đang tải danh sách quốc gia..."
+              : countriesQuery.error
+                ? "Không tải được danh sách quốc gia."
+                : null
+          }
+          options={[
+            { value: "", label: "Tất cả quốc gia" },
+            ...(countriesQuery.data ?? []).map((item) => ({
+              value: item.slug,
+              label: item.name,
+            })),
+          ]}
+        />
+
+        <FilterSelect
+          label="Năm phát hành"
+          hint="Chọn năm nếu bạn muốn thu gọn kết quả về một giai đoạn cụ thể."
+          value={year}
+          onChange={(nextValue) => updateParams({ year: nextValue })}
+          placeholder="Tất cả năm"
+          options={yearOptions}
+        />
+
+        <FilterSelect
+          label="Sắp xếp theo"
+          hint="Chọn tiêu chí ưu tiên để kết quả hiện ra theo đúng nhu cầu."
+          value={sortField}
+          onChange={(nextValue) => updateParams({ sort_field: nextValue })}
+          placeholder="Chọn tiêu chí sắp xếp"
+          options={sortFieldOptions}
+        />
+
+        <FilterSelect
+          label="Thứ tự hiển thị"
+          hint="Đảo chiều danh sách theo tăng dần hoặc giảm dần."
+          value={sortType}
+          onChange={(nextValue) => updateParams({ sort_type: nextValue })}
+          placeholder="Chọn thứ tự hiển thị"
+          options={sortTypeOptions}
+        />
+
+        <FilterSelect
+          label="Phiên bản âm thanh / phụ đề"
+          hint="Giữ lại riêng phim Vietsub, Thuyết minh hoặc Lồng tiếng nếu cần."
+          value={sortLang}
+          onChange={(nextValue) => updateParams({ sort_lang: nextValue })}
+          placeholder="Tất cả phiên bản"
+          options={sortLanguageOptions}
+        />
+      </div>
+
+      {hasActiveFilters ? (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {keyword ? (
+            <button
+              type="button"
+              onClick={() => updateParams({ keyword: "" })}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/15"
+            >
+              <span className="truncate max-w-[16rem]">Từ khóa: {keyword}</span>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+          {categoryLabel ? (
+            <button
+              type="button"
+              onClick={() => updateParams({ category: "" })}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/15"
+            >
+              <span>Thể loại: {categoryLabel}</span>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+          {countryLabel ? (
+            <button
+              type="button"
+              onClick={() => updateParams({ country: "" })}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/15"
+            >
+              <span>Quốc gia: {countryLabel}</span>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+          {year ? (
+            <button
+              type="button"
+              onClick={() => updateParams({ year: "" })}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/15"
+            >
+              <span>Năm: {year}</span>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+          {sortLang ? (
+            <button
+              type="button"
+              onClick={() => updateParams({ sort_lang: "" })}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary/35 hover:bg-primary/15"
+            >
+              <span>
+                Phiên bản:{" "}
+                {sortLanguageOptions.find((item) => item.value === sortLang)?.label ?? sortLang}
+              </span>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="content-shell layout-padding py-10">
       <PageNavigation
         backTo="/"
         backLabel="Trang chủ"
-        items={[
-          { label: "Trang chủ", to: "/" },
-          { label: "Danh mục phim" },
-        ]}
+        items={[{ label: "Trang chủ", to: "/" }, { label: "Danh mục phim" }]}
       />
 
-      <div className="mb-8 rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.12),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]">
+      <div className="sticky top-16 z-30 mb-8 overflow-visible rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.12),_transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] backdrop-blur-xl md:relative md:top-auto">
         <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
@@ -387,9 +606,25 @@ const CatalogPage = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileFiltersExpanded((current) => !current)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-primary/40 hover:bg-primary/10 md:hidden"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {mobileFiltersExpanded
+                ? "Ẩn bộ lọc"
+                : `Bộ lọc${activeFilterCount ? ` (${activeFilterCount})` : ""}`}
+            </button>
             <div className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white">
               {displayTotalItems} phim • {displayTotalPages} trang
             </div>
+            {isRefreshingList ? (
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
+                <Skeleton className="h-2.5 w-2.5 rounded-full" />
+                Đang cập nhật danh sách...
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={resetFilters}
@@ -401,148 +636,41 @@ const CatalogPage = () => {
           </div>
         </div>
 
-        <div className="px-6 py-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <FilterSelect
-              label="Loại phim"
-              hint="Chọn nhóm nội dung bạn muốn duyệt trong kho phim."
-              value={type}
-              onChange={(nextValue) => updateParams({ type: nextValue })}
-              placeholder="Chọn loại phim"
-              options={validTypes.map((item) => ({
-                value: item,
-                label: typeLabels[item],
-              }))}
-            />
-
-            <FilterField
-              label="Từ khóa tìm kiếm"
-              hint="Nhập tên phim, diễn viên hoặc cụm từ gần đúng rồi bấm áp dụng."
-            >
-              <form onSubmit={handleKeywordSubmit} className="flex gap-2">
-                <input
-                  value={keywordDraft}
-                  onChange={(event) => setKeywordDraft(event.target.value)}
-                  placeholder="Ví dụ: One Piece, Thành Long..."
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-primary/40 placeholder:text-muted-foreground"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-                >
-                  <Search className="h-4 w-4" />
-                  Áp dụng
-                </button>
-              </form>
-            </FilterField>
-
-            <FilterSelect
-              label="Thể loại"
-              hint="Chọn trực tiếp từ danh sách, không cần nhớ hay nhập mã thể loại."
-              value={category}
-              onChange={(nextValue) => updateParams({ category: nextValue })}
-              placeholder="Tất cả thể loại"
-              statusMessage={
-                categoriesQuery.isLoading
-                  ? "Đang tải danh sách thể loại..."
-                  : categoriesQuery.error
-                    ? "Không tải được danh sách thể loại."
-                    : null
-              }
-              options={[
-                { value: "", label: "Tất cả thể loại" },
-                ...(categoriesQuery.data ?? []).map((item) => ({
-                  value: item.slug,
-                  label: item.name,
-                })),
-              ]}
-            />
-
-            <FilterSelect
-              label="Quốc gia"
-              hint="Lọc theo nơi sản xuất phim, đã có sẵn danh sách chuẩn để chọn."
-              value={country}
-              onChange={(nextValue) => updateParams({ country: nextValue })}
-              placeholder="Tất cả quốc gia"
-              statusMessage={
-                countriesQuery.isLoading
-                  ? "Đang tải danh sách quốc gia..."
-                  : countriesQuery.error
-                    ? "Không tải được danh sách quốc gia."
-                    : null
-              }
-              options={[
-                { value: "", label: "Tất cả quốc gia" },
-                ...(countriesQuery.data ?? []).map((item) => ({
-                  value: item.slug,
-                  label: item.name,
-                })),
-              ]}
-            />
-
-            <FilterSelect
-              label="Năm phát hành"
-              hint="Chọn năm nếu bạn muốn thu gọn kết quả về một giai đoạn cụ thể."
-              value={year}
-              onChange={(nextValue) => updateParams({ year: nextValue })}
-              placeholder="Tất cả năm"
-              options={yearOptions}
-            />
-
-            <FilterSelect
-              label="Sắp xếp theo"
-              hint="Chọn tiêu chí ưu tiên để kết quả hiện ra theo đúng nhu cầu."
-              value={sortField}
-              onChange={(nextValue) => updateParams({ sort_field: nextValue })}
-              placeholder="Chọn tiêu chí sắp xếp"
-              options={sortFieldOptions}
-            />
-
-            <FilterSelect
-              label="Thứ tự hiển thị"
-              hint="Đảo chiều danh sách theo tăng dần hoặc giảm dần."
-              value={sortType}
-              onChange={(nextValue) => updateParams({ sort_type: nextValue })}
-              placeholder="Chọn thứ tự hiển thị"
-              options={sortTypeOptions}
-            />
-
-            <FilterSelect
-              label="Phiên bản âm thanh / phụ đề"
-              hint="Giữ lại riêng phim Vietsub, Thuyết minh hoặc Lồng tiếng nếu cần."
-              value={sortLang}
-              onChange={(nextValue) => updateParams({ sort_lang: nextValue })}
-              placeholder="Tất cả phiên bản"
-              options={sortLanguageOptions}
-            />
-
-            <div className="rounded-[24px] border border-dashed border-white/10 bg-black/15 p-4">
-              <p className="text-sm font-semibold text-white">Mẹo lọc nhanh</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Dùng dropdown cho thể loại, quốc gia, năm và phiên bản để tránh nhập sai
-                chuẩn slug. Ô tìm kiếm chỉ dành cho từ khóa tự do.
-              </p>
-            </div>
-          </div>
-
-          {activeFilterLabels.length > 0 ? (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {activeFilterLabels.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <div className="hidden px-6 py-6 md:block">{filterControls}</div>
       </div>
 
-      {listQuery.isLoading ? (
-        <p className="text-muted-foreground">Đang tải danh sách phim...</p>
+      {mobileFiltersExpanded ? (
+        <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm md:hidden">
+          <button
+            type="button"
+            aria-label="Đóng bộ lọc"
+            className="absolute inset-0"
+            onClick={() => setMobileFiltersExpanded(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[84vh] overflow-hidden rounded-t-[32px] border border-white/10 bg-[#09090d] shadow-[0_-24px_80px_rgba(0,0,0,0.45)]">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+                  Bộ lọc nhanh
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-white">Tinh chỉnh danh mục</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersExpanded(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition-colors hover:border-primary/40 hover:bg-primary/10"
+                aria-label="Đóng bộ lọc"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[calc(84vh-86px)] overflow-y-auto px-5 py-5">
+              {filterControls}
+            </div>
+          </div>
+        </div>
       ) : null}
+
       {listQuery.error ? (
         <p className="text-red-400">
           {(listQuery.error as Error).message || "Không thể tải danh mục phim."}
@@ -558,11 +686,50 @@ const CatalogPage = () => {
           }
         />
       ) : null}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-        {listQuery.data?.items.map((movie) => (
-          <MovieCard key={movie.slug} movie={movie} />
-        ))}
-      </div>
+      {isInitialListLoading ? (
+        <CatalogGridSkeleton />
+      ) : !listItems.length ? (
+        <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+            <Search className="h-5 w-5" />
+          </div>
+          <h2 className="mt-5 text-2xl font-black text-white">Không có phim phù hợp</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+            Thử bỏ bớt bộ lọc, đổi từ khóa ngắn hơn hoặc quay lại các danh mục duyệt phổ biến
+            để tiếp tục khám phá kho phim.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Xóa bộ lọc
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchParams(buildDefaultCatalogParams("phim-bo"))}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-primary/40 hover:bg-primary/10"
+            >
+              Quay lại phim bộ
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchParams(buildDefaultCatalogParams("phim-le"))}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-primary/40 hover:bg-primary/10"
+            >
+              Quay lại phim lẻ
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="relative z-0 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          {listItems.map((movie) => (
+            <MovieCard key={movie.slug} movie={movie} />
+          ))}
+        </div>
+      )}
 
       {listQuery.data && displayTotalPages > 1 ? (
         <PaginationControls

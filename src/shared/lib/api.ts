@@ -23,9 +23,13 @@ interface RequestOptions {
   token?: string | null;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   const headers = new Headers();
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
 
   if (!isFormData) {
     headers.set("Content-Type", "application/json");
@@ -77,9 +81,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   home: () => request<HomeResponse>("/catalog/home"),
   latest: (page = 1, version = "v3") =>
-    request<PagedMovieResponse>(`/catalog/latest?page=${page}&version=${version}`),
+    request<PagedMovieResponse>(
+      `/catalog/latest?page=${page}&version=${version}`,
+    ),
+  listAll: (searchParams: URLSearchParams) =>
+    request<PagedMovieResponse>(`/catalog/list?${searchParams.toString()}`),
   list: (type: string, searchParams: URLSearchParams) =>
-    request<PagedMovieResponse>(`/catalog/list/${type}?${searchParams.toString()}`),
+    request<PagedMovieResponse>(
+      `/catalog/list/${type}?${searchParams.toString()}`,
+    ),
   search: (searchParams: URLSearchParams) =>
     request<PagedMovieResponse>(`/catalog/search?${searchParams.toString()}`),
   categories: () => request<any>("/catalog/categories"),
@@ -94,25 +104,39 @@ export const api = {
     ),
   movie: (slug: string) => request<MovieDetailResponse>(`/movies/${slug}`),
   startRegistration: (payload: { email: string }) =>
-    request<MessageResponse>("/auth/start-registration", { method: "POST", body: payload }),
+    request<MessageResponse>("/auth/start-registration", {
+      method: "POST",
+      body: payload,
+    }),
   validateRegistrationToken: (token: string) =>
-    request<RegistrationTokenValidationResponse>(`/auth/validate-token/${encodeURIComponent(token)}`),
+    request<RegistrationTokenValidationResponse>(
+      `/auth/validate-token/${encodeURIComponent(token)}`,
+    ),
   completeRegistration: (payload: {
     verificationToken: string;
     fullName: string;
     password: string;
-  }) => request<AuthResponse>("/auth/complete-registration", { method: "POST", body: payload }),
+  }) =>
+    request<AuthResponse>("/auth/complete-registration", {
+      method: "POST",
+      body: payload,
+    }),
   login: (payload: { email: string; password: string }) =>
     request<AuthResponse>("/auth/login", { method: "POST", body: payload }),
   me: (token: string) => request<UserProfile>("/auth/me", { token }),
   updateProfile: (
     token: string,
     payload: { fullName: string; avatarUrl?: string; bio?: string },
-  ) => request<UserProfile>("/users/me", { method: "PUT", body: payload, token }),
+  ) =>
+    request<UserProfile>("/users/me", { method: "PUT", body: payload, token }),
   uploadFile: (token: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return request<UploadResponse>("/upload", { method: "POST", body: formData, token });
+    return request<UploadResponse>("/upload", {
+      method: "POST",
+      body: formData,
+      token,
+    });
   },
   wishlist: (token: string) => request<LibraryMovie[]>("/wishlist", { token }),
   wishlistState: (token: string, movieSlug: string) =>
@@ -132,13 +156,19 @@ export const api = {
       lang?: string | null;
       year?: string | null;
     },
-  ) => request<LibraryMovie>("/wishlist", { method: "POST", body: payload, token }),
+  ) =>
+    request<LibraryMovie>("/wishlist", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
   removeWishlist: (token: string, movieSlug: string) =>
     request<void>(`/wishlist/${encodeURIComponent(movieSlug)}`, {
       method: "DELETE",
       token,
     }),
-  history: (token: string) => request<WatchHistoryItem[]>("/history", { token }),
+  history: (token: string) =>
+    request<WatchHistoryItem[]>("/history", { token }),
   saveHistory: (
     token: string,
     payload: {
@@ -156,7 +186,17 @@ export const api = {
       lastEpisodeIndex?: number | null;
       durationSeconds?: number | null;
     },
-  ) => request<WatchHistoryItem>("/history", { method: "POST", body: payload, token }),
+  ) =>
+    request<WatchHistoryItem>("/history", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+  removeHistory: (token: string, historyId: number) =>
+    request<void>(`/history/${historyId}`, {
+      method: "DELETE",
+      token,
+    }),
 };
 
 export { API_BASE_URL };

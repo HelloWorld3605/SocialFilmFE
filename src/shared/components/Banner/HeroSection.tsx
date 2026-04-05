@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Play,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Play, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MovieSummary } from "@/shared/types/api";
 import { buildWatchUrl } from "@/shared/lib/watch";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface HeroSectionProps {
   movies: MovieSummary[];
@@ -44,7 +40,8 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
     }
 
     const nextLeft =
-      activeCard.offsetLeft - (viewport.clientWidth - activeCard.offsetWidth) / 2;
+      activeCard.offsetLeft -
+      (viewport.clientWidth - activeCard.offsetWidth) / 2;
 
     viewport.scrollTo({
       left: Math.max(nextLeft, 0),
@@ -52,12 +49,57 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
     });
   }, [activeIndex]);
 
-  const activeMovie = movies[Math.min(activeIndex, Math.max(movies.length - 1, 0))] ?? null;
+  const activeMovie =
+    movies[Math.min(activeIndex, Math.max(movies.length - 1, 0))] ?? null;
 
   if (!activeMovie) {
     return (
-      <section className="relative flex h-screen items-center justify-center overflow-hidden bg-background">
-        <p className="text-muted-foreground">Đang tải phần phim nổi bật...</p>
+      <section className="relative h-screen w-full overflow-hidden bg-background">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.18),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-background/10" />
+        <div className="relative z-10 flex h-full items-end">
+          <div className="layout-padding grid w-full grid-cols-1 gap-8 pb-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.38fr)]">
+            <div className="space-y-5 p-1 pr-2">
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-12 w-4/5 max-w-xl" />
+                <Skeleton className="h-12 w-3/5 max-w-lg" />
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <Skeleton className="h-11 w-32 rounded-lg" />
+                <Skeleton className="h-11 w-28 rounded-lg" />
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex gap-4 overflow-hidden px-2 pb-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={`hero-skeleton-${index}`}
+                    className="flex w-[205px] flex-none overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] md:w-[245px]"
+                  >
+                    <Skeleton className="h-full w-[72px] flex-none rounded-none md:w-[84px]" />
+                    <div className="flex min-w-0 flex-1 flex-col justify-between p-3">
+                      <div className="space-y-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-4 w-4/5" />
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="h-3 w-2/3" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-1.5">
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                          <Skeleton className="h-6 w-12 rounded-full" />
+                        </div>
+                        <Skeleton className="h-1.5 w-full rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     );
   }
@@ -68,7 +110,10 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
 
   const scrollCarousel = (direction: "left" | "right") => {
     const delta = direction === "left" ? -1 : 1;
-    const nextIndex = Math.min(Math.max(activeIndex + delta, 0), movies.length - 1);
+    const nextIndex = Math.min(
+      Math.max(activeIndex + delta, 0),
+      movies.length - 1,
+    );
     if (nextIndex !== activeIndex) {
       setActiveMovieByIndex(nextIndex);
     }
@@ -81,6 +126,8 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
           key={activeMovie.slug}
           src={activeMovie.thumbUrl || activeMovie.posterUrl || ""}
           alt={activeMovie.name}
+          loading="eager"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover object-[center_10%] animate-in fade-in duration-700"
         />
       </div>
@@ -162,10 +209,10 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                         movieCardRefs.current[index] = el;
                       }}
                       onClick={() => setActiveMovieByIndex(index)}
-                      className={`group relative flex w-[205px] flex-none cursor-pointer snap-start overflow-hidden rounded-[20px] border transition-all duration-300 md:w-[245px] ${
+                      className={`group relative flex w-[205px] flex-none cursor-pointer snap-start overflow-hidden rounded-[26px] border transition-all duration-300 md:w-[245px] ${
                         activeIndex === index
-                          ? "border-primary/70 bg-white/[0.08] shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
-                          : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
+                          ? "border-primary/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05))] shadow-[0_24px_60px_rgba(0,0,0,0.45)]"
+                          : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] hover:border-white/25 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.05))]"
                       }`}
                     >
                       <div className="relative w-[72px] flex-none overflow-hidden md:w-[84px]">
@@ -195,12 +242,12 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                         <div className="mt-3 space-y-2">
                           <div className="flex flex-wrap gap-1.5 text-[10px] text-white/70">
                             {movie.episodeCurrent ? (
-                              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                              <span className="rounded-full border border-white/10 bg-black/35 px-2.5 py-1">
                                 {movie.episodeCurrent}
                               </span>
                             ) : null}
                             {movie.year ? (
-                              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                              <span className="rounded-full border border-white/10 bg-black/35 px-2.5 py-1">
                                 {movie.year}
                               </span>
                             ) : null}
@@ -209,7 +256,9 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                           <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
-                                activeIndex === index ? "w-full bg-primary" : "w-1/3 bg-white/25"
+                                activeIndex === index
+                                  ? "w-full bg-primary"
+                                  : "w-1/3 bg-white/25"
                               }`}
                             />
                           </div>
