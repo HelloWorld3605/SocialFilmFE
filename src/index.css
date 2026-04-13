@@ -55,6 +55,32 @@
   * {
     @apply border-border;
   }
+  html,
+  body {
+    scrollbar-color: #0a0a0a #000000;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #0a0a0a #000000;
+  }
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  *::-webkit-scrollbar-track {
+    background: #000000;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #171717 0%, #050505 100%);
+    border: 2px solid #000000;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  }
+  *:hover {
+    scrollbar-color: #dc2626 #000000;
+  }
   body {
     @apply bg-background text-foreground font-sans;
     font-family: "Inter", sans-serif;

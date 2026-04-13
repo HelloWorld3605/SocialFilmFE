@@ -85,6 +85,27 @@ const findEpisodeSelectionByName = (
 const stripHtml = (value: unknown) =>
   typeof value === "string" ? value.replace(/<[^>]+>/g, "").trim() : "";
 
+const isKeyboardTargetInteractive = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        "input",
+        "textarea",
+        "select",
+        "button",
+        "[contenteditable='true']",
+        "[role='textbox']",
+        "[role='slider']",
+        "[data-radix-collection-item]",
+      ].join(","),
+    ),
+  );
+};
+
 const appendAutoplayParam = (url: string | undefined) => {
   if (!url) {
     return "";
@@ -916,6 +937,63 @@ const WatchPage = () => {
       window.removeEventListener("pointercancel", handlePointerRelease);
     };
   }, [endControlsInteraction, finishProgressScrub, isInteractingWithControls]);
+
+  useEffect(() => {
+    if (!prefersInternalPlayer) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isSettingsOpen ||
+        isInteractingWithControls ||
+        isKeyboardTargetInteractive(event.target)
+      ) {
+        return;
+      }
+
+      const video = videoRef.current;
+      if (!video) {
+        return;
+      }
+
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
+      }
+
+      event.preventDefault();
+
+      const nextTime = Math.min(
+        Math.max(
+          (video.currentTime || 0) + (event.key === "ArrowLeft" ? -10 : 10),
+          0,
+        ),
+        Number.isFinite(video.duration) ? video.duration : duration || 0,
+      );
+
+      video.currentTime = nextTime;
+      setCurrentTime(nextTime);
+      setAreControlsVisible(true);
+      startControlsHideTimer();
+      persistProgressRef.current?.("PERIODIC");
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    duration,
+    isInteractingWithControls,
+    isSettingsOpen,
+    prefersInternalPlayer,
+    startControlsHideTimer,
+  ]);
 
   if (movieQuery.isLoading) {
     return (
