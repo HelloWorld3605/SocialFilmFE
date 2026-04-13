@@ -9,6 +9,8 @@ import {
 import Hls from "hls.js";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import {
+  ChevronLeft,
+  ChevronRight,
   Check,
   Maximize,
   Minimize,
@@ -40,9 +42,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { cn } from "@/shared/utils/utils";
@@ -137,6 +136,7 @@ type SaveHistoryReason =
   | "EXIT";
 
 type PlaybackFeedbackAction = "play" | "pause";
+type SettingsPanel = "main" | "speed" | "quality" | "sleep";
 type SleepTimerSetting =
   | { mode: "off" }
   | { mode: "minutes"; minutes: number; endsAt: number }
@@ -321,6 +321,7 @@ const WatchPage = () => {
   const [isInteractingWithControls, setIsInteractingWithControls] =
     useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsPanel, setSettingsPanel] = useState<SettingsPanel>("main");
   const [playbackFeedback, setPlaybackFeedback] =
     useState<PlaybackFeedbackAction | null>(null);
   const [isPlaybackFeedbackVisible, setIsPlaybackFeedbackVisible] =
@@ -697,6 +698,7 @@ const WatchPage = () => {
     setIsInteractingWithControls(false);
     setIsPointerOverPlayer(false);
     setIsSettingsOpen(false);
+    setSettingsPanel("main");
     setPlaybackFeedback(null);
     setIsPlaybackFeedbackVisible(false);
     clearPlaybackFeedbackTimers();
@@ -1196,6 +1198,14 @@ const WatchPage = () => {
           ? `Hết video (${formatPlayerTime(remainingVideoSeconds)})`
           : "Hết video"
         : "Tắt";
+  const settingsPanelTitle =
+    settingsPanel === "speed"
+      ? "Tốc độ phát"
+      : settingsPanel === "quality"
+        ? "Chất lượng"
+        : settingsPanel === "sleep"
+          ? "Hẹn giờ ngủ"
+          : "Cài đặt trình phát";
 
   const revealControls = () => {
     if (!prefersInternalPlayer) {
@@ -1346,6 +1356,12 @@ const WatchPage = () => {
     clearSleepTimerTickInterval();
     setSleepTimerNow(Date.now());
     setSleepTimerSetting({ mode: "video-end" });
+  };
+
+  const handleSettingsOptionSelect = (action: () => void) => (event: Event) => {
+    event.preventDefault();
+    action();
+    setSettingsPanel("main");
   };
 
   const toggleFullscreen = async () => {
@@ -1576,12 +1592,14 @@ const WatchPage = () => {
                         onOpenChange={(open) => {
                           setIsSettingsOpen(open);
                           if (open) {
+                            setSettingsPanel("main");
                             beginControlsInteraction();
                             setAreControlsVisible(true);
                             clearControlsHideTimer();
                             return;
                           }
 
+                          setSettingsPanel("main");
                           endControlsInteraction();
                         }}
                       >
@@ -1592,121 +1610,141 @@ const WatchPage = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           onCloseAutoFocus={(event) => event.preventDefault()}
+                          side="top"
+                          sideOffset={20}
                           align="end"
+                          alignOffset={-48}
+                          collisionBoundary={playerRef.current ?? undefined}
+                          collisionPadding={16}
                           portalContainer={isFullscreen ? playerRef.current : undefined}
-                          className="w-64 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
+                          className="w-80 rounded-2xl border border-white/10 bg-[rgba(0,0,0,0.28)] p-2 text-white shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-3xl"
                         >
-                          <DropdownMenuLabel className="text-white/60">
-                            Cài đặt trình phát
-                          </DropdownMenuLabel>
+                          <div className="flex items-center gap-2 px-1 pb-1">
+                            {settingsPanel !== "main" ? (
+                              <button
+                                type="button"
+                                onClick={() => setSettingsPanel("main")}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                            <DropdownMenuLabel className="px-2 py-1 text-white/60">
+                              {settingsPanelTitle}
+                            </DropdownMenuLabel>
+                          </div>
                           <DropdownMenuSeparator className="bg-white/10" />
 
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
-                              <div className="flex min-w-0 flex-1 items-center gap-4">
-                                <span className="truncate">Tốc độ phát</span>
-                                <span className="ml-auto text-xs text-white/45">
-                                  {formatPlaybackRateLabel(playbackRate)}
-                                </span>
-                              </div>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent
-                              portalContainer={
-                                isFullscreen ? playerRef.current : undefined
-                              }
-                              className="w-60 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
-                            >
-                              <DropdownMenuLabel className="text-white/60">
-                                Tốc độ phát
-                              </DropdownMenuLabel>
-                              {PLAYBACK_SPEED_OPTIONS.map((rate) => (
+                          {settingsPanel === "main" ? (
+                            <>
+                              <DropdownMenuItem
+                                onSelect={(event) => {
+                                  event.preventDefault();
+                                  setSettingsPanel("speed");
+                                }}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                  <span className="truncate">Tốc độ phát</span>
+                                  <span className="ml-auto text-xs text-white/45">
+                                    {formatPlaybackRateLabel(playbackRate)}
+                                  </span>
+                                  <ChevronRight className="h-4 w-4 text-white/35" />
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={(event) => {
+                                  event.preventDefault();
+                                  setSettingsPanel("quality");
+                                }}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                  <span className="truncate">Chất lượng</span>
+                                  <span className="ml-auto text-xs text-white/45">
+                                    {selectedQualityLabel}
+                                  </span>
+                                  <ChevronRight className="h-4 w-4 text-white/35" />
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={(event) => {
+                                  event.preventDefault();
+                                  setSettingsPanel("sleep");
+                                }}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                  <span className="truncate">Hẹn giờ ngủ</span>
+                                  <span className="ml-auto text-xs text-white/45">
+                                    {sleepTimerLabel}
+                                  </span>
+                                  <ChevronRight className="h-4 w-4 text-white/35" />
+                                </div>
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+
+                          {settingsPanel === "speed" ? (
+                            PLAYBACK_SPEED_OPTIONS.map((rate) => (
+                              <DropdownMenuItem
+                                key={rate}
+                                onSelect={handleSettingsOptionSelect(() =>
+                                  changePlaybackRate(rate),
+                                )}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <span>{formatPlaybackRateLabel(rate)}</span>
+                                {playbackRate === rate ? (
+                                  <Check className="ml-auto h-4 w-4 text-red-400" />
+                                ) : null}
+                              </DropdownMenuItem>
+                            ))
+                          ) : null}
+
+                          {settingsPanel === "quality" ? (
+                            qualityOptions.length ? (
+                              <>
                                 <DropdownMenuItem
-                                  key={rate}
-                                  onSelect={() => changePlaybackRate(rate)}
+                                  onSelect={handleSettingsOptionSelect(() =>
+                                    changeQuality(-1),
+                                  )}
                                   className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                                 >
-                                  <span>{formatPlaybackRateLabel(rate)}</span>
-                                  {playbackRate === rate ? (
+                                  <span>Tự động</span>
+                                  {selectedQuality === -1 ? (
                                     <Check className="ml-auto h-4 w-4 text-red-400" />
                                   ) : null}
                                 </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
-                              <div className="flex min-w-0 flex-1 items-center gap-4">
-                                <span className="truncate">Chất lượng</span>
-                                <span className="ml-auto text-xs text-white/45">
-                                  {selectedQualityLabel}
-                                </span>
-                              </div>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent
-                              portalContainer={
-                                isFullscreen ? playerRef.current : undefined
-                              }
-                              className="w-60 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
-                            >
-                              <DropdownMenuLabel className="text-white/60">
-                                Chất lượng
-                              </DropdownMenuLabel>
-                              {qualityOptions.length ? (
-                                <>
+                                {qualityOptions.map((option) => (
                                   <DropdownMenuItem
-                                    onSelect={() => changeQuality(-1)}
+                                    key={option.value}
+                                    onSelect={handleSettingsOptionSelect(() =>
+                                      changeQuality(option.value),
+                                    )}
                                     className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                                   >
-                                    <span>Tự động</span>
-                                    {selectedQuality === -1 ? (
+                                    <span>{option.label}</span>
+                                    {selectedQuality === option.value ? (
                                       <Check className="ml-auto h-4 w-4 text-red-400" />
                                     ) : null}
                                   </DropdownMenuItem>
-                                  {qualityOptions.map((option) => (
-                                    <DropdownMenuItem
-                                      key={option.value}
-                                      onSelect={() => changeQuality(option.value)}
-                                      className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
-                                    >
-                                      <span>{option.label}</span>
-                                      {selectedQuality === option.value ? (
-                                        <Check className="ml-auto h-4 w-4 text-red-400" />
-                                      ) : null}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </>
-                              ) : (
-                                <DropdownMenuItem
-                                  disabled
-                                  className="rounded-xl px-3 py-2 text-white/45"
-                                >
-                                  Không có lựa chọn chất lượng
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
-                              <div className="flex min-w-0 flex-1 items-center gap-4">
-                                <span className="truncate">Hẹn giờ ngủ</span>
-                                <span className="ml-auto text-xs text-white/45">
-                                  {sleepTimerLabel}
-                                </span>
-                              </div>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent
-                              portalContainer={
-                                isFullscreen ? playerRef.current : undefined
-                              }
-                              className="w-64 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
-                            >
-                              <DropdownMenuLabel className="text-white/60">
-                                Hẹn giờ ngủ
-                              </DropdownMenuLabel>
+                                ))}
+                              </>
+                            ) : (
                               <DropdownMenuItem
-                                onSelect={clearSleepTimer}
+                                disabled
+                                className="rounded-xl px-3 py-2 text-white/45"
+                              >
+                                Không có lựa chọn chất lượng
+                              </DropdownMenuItem>
+                            )
+                          ) : null}
+
+                          {settingsPanel === "sleep" ? (
+                            <>
+                              <DropdownMenuItem
+                                onSelect={handleSettingsOptionSelect(clearSleepTimer)}
                                 className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                               >
                                 <span>Tắt hẹn giờ</span>
@@ -1718,7 +1756,9 @@ const WatchPage = () => {
                               {SLEEP_TIMER_MINUTE_OPTIONS.map((minutes) => (
                                 <DropdownMenuItem
                                   key={minutes}
-                                  onSelect={() => setMinuteSleepTimer(minutes)}
+                                  onSelect={handleSettingsOptionSelect(() =>
+                                    setMinuteSleepTimer(minutes),
+                                  )}
                                   className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                                 >
                                   <span>{minutes} phút</span>
@@ -1730,7 +1770,9 @@ const WatchPage = () => {
                               ))}
                               <DropdownMenuSeparator className="bg-white/10" />
                               <DropdownMenuItem
-                                onSelect={setVideoEndSleepTimer}
+                                onSelect={handleSettingsOptionSelect(
+                                  setVideoEndSleepTimer,
+                                )}
                                 className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                               >
                                 <span>
@@ -1743,8 +1785,8 @@ const WatchPage = () => {
                                   <Check className="ml-auto h-4 w-4 text-red-400" />
                                 ) : null}
                               </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
+                            </>
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
 
