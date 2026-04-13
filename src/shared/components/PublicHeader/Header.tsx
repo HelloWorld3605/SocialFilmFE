@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FormEvent, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, Heart, LogOut, Menu, Search, Settings2, User, X } from "lucide-react";
+import { ChevronDown, Heart, LogOut, Menu, Search, Settings2, ShieldEllipsis, User, X } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 import {
@@ -855,6 +855,16 @@ export function Header({ overlay = false }: HeaderProps) {
                       <Settings2 className="h-4 w-4 shrink-0" />
                       <span>Cài đặt</span>
                     </Link>
+                    {user?.role === "ADMIN" ? (
+                      <Link
+                        to="/admin/overview"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white transition-colors hover:bg-white/10"
+                      >
+                        <ShieldEllipsis className="h-4 w-4 shrink-0" />
+                        <span>Quản trị</span>
+                      </Link>
+                    ) : null}
                     <button
                       onClick={() => {
                         setUserMenuOpen(false);
@@ -1033,6 +1043,15 @@ export function Header({ overlay = false }: HeaderProps) {
                 >
                   Xem sau
                 </Link>
+                {user?.role === "ADMIN" ? (
+                  <Link
+                    to="/admin/overview"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-xl bg-primary/15 px-4 py-3 text-sm text-white"
+                  >
+                    Quản trị
+                  </Link>
+                ) : null}
                 <button
                   onClick={() => {
                     logout();

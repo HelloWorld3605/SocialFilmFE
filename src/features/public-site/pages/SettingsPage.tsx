@@ -8,6 +8,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  ShieldEllipsis,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -213,6 +214,24 @@ const SettingsPage = () => {
                 </div>
                 <ArrowRight className="h-4 w-4 shrink-0 text-white/55" />
               </Link>
+
+              {user.role === "ADMIN" ? (
+                <Link
+                  to="/admin/overview"
+                  className="flex items-center justify-between rounded-[24px] border border-primary/20 bg-primary/10 px-4 py-4 text-white transition-colors hover:border-primary/40 hover:bg-primary/15"
+                >
+                  <div className="flex items-center gap-3">
+                    <ShieldEllipsis className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-semibold text-white">Khu quản trị</p>
+                      <p className="text-xs text-white/60">
+                        Dashboard admin và quản lý người dùng.
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-white/55" />
+                </Link>
+              ) : null}
             </div>
           </section>
 

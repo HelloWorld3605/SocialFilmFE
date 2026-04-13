@@ -32,6 +32,103 @@ export interface HomeResponse {
   tvShows: MovieSummary[];
 }
 
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalAdmins: number;
+  verifiedUsers: number;
+  newUsersLast7Days: number;
+  activeUsersLast7Days: number;
+  totalWatchHistoryEntries: number;
+  watchHistoryLast7Days: number;
+  totalWishlistItems: number;
+  wishlistItemsLast7Days: number;
+  totalUploads: number;
+  uploadsLast30Days: number;
+}
+
+export interface AdminUserSummary {
+  id: number;
+  fullName: string;
+  email: string;
+  role: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  watchHistoryCount: number;
+  wishlistCount: number;
+}
+
+export interface AdminMovieMetric {
+  movieSlug: string;
+  movieName: string;
+  thumbUrl?: string | null;
+  total: number;
+}
+
+export interface AdminActivityItem {
+  type: "WATCH" | "WISHLIST" | string;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  movieSlug: string;
+  movieName: string;
+  detail: string;
+  occurredAt: string;
+}
+
+export interface AdminRecentWatchItem {
+  id: number;
+  movieSlug: string;
+  movieName: string;
+  originName?: string | null;
+  thumbUrl?: string | null;
+  lastEpisodeName?: string | null;
+  lastPositionSeconds?: number | null;
+  durationSeconds?: number | null;
+  updatedAt: string;
+}
+
+export interface AdminRecentWishlistItem {
+  id: number;
+  movieSlug: string;
+  movieName: string;
+  originName?: string | null;
+  thumbUrl?: string | null;
+  createdAt: string;
+}
+
+export interface AdminOverviewResponse {
+  stats: AdminDashboardStats;
+  latestUsers: AdminUserSummary[];
+  recentActivity: AdminActivityItem[];
+  topWatchedMovies: AdminMovieMetric[];
+  topWishlistedMovies: AdminMovieMetric[];
+}
+
+export interface AdminUsersResponse {
+  page: number;
+  size: number;
+  totalPages: number;
+  totalItems: number;
+  items: AdminUserSummary[];
+}
+
+export interface AdminUserDetailResponse {
+  user: AdminUserSummary;
+  recentWatchHistory: AdminRecentWatchItem[];
+  recentWishlist: AdminRecentWishlistItem[];
+}
+
+export interface AdminUpdateUserRequest {
+  fullName: string;
+  role: "USER" | "ADMIN";
+  emailVerified: boolean;
+  avatarUrl?: string | null;
+  bio?: string | null;
+}
+
 export interface UserProfile {
   id: number;
   fullName: string;

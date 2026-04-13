@@ -1,5 +1,9 @@
 import type {
   AuthResponse,
+  AdminOverviewResponse,
+  AdminUpdateUserRequest,
+  AdminUserDetailResponse,
+  AdminUsersResponse,
   HomeResponse,
   LibraryMovie,
   MessageResponse,
@@ -92,6 +96,24 @@ export const api = {
     request<PagedMovieResponse>(
       `/catalog/list/${type}?${searchParams.toString()}`,
     ),
+  adminOverview: (token: string) =>
+    request<AdminOverviewResponse>("/admin/overview", { token }),
+  adminUsers: (token: string, searchParams: URLSearchParams) =>
+    request<AdminUsersResponse>(`/admin/users?${searchParams.toString()}`, {
+      token,
+    }),
+  adminUser: (token: string, userId: number | string) =>
+    request<AdminUserDetailResponse>(`/admin/users/${userId}`, { token }),
+  updateAdminUser: (
+    token: string,
+    userId: number | string,
+    payload: AdminUpdateUserRequest,
+  ) =>
+    request<AdminUserDetailResponse>(`/admin/users/${userId}`, {
+      method: "PUT",
+      body: payload,
+      token,
+    }),
   search: (searchParams: URLSearchParams) =>
     request<PagedMovieResponse>(`/catalog/search?${searchParams.toString()}`),
   categories: () => request<any>("/catalog/categories"),
