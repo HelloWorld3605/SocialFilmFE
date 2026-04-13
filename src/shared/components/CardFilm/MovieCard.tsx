@@ -11,13 +11,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+import { cn } from "@/shared/utils/utils";
 
 interface MovieCardProps {
   movie: MovieSummary;
   index?: number;
+  className?: string;
 }
 
-const MovieCard = ({ movie, index }: MovieCardProps) => {
+const MovieCard = ({ movie, index, className }: MovieCardProps) => {
   const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -127,7 +129,10 @@ const MovieCard = ({ movie, index }: MovieCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: (index ?? 0) * 0.05 }}
-      className="group flex min-w-[160px] cursor-pointer flex-col gap-3 rounded-[28px] sm:min-w-[200px]"
+      className={cn(
+        "group flex min-w-[160px] cursor-pointer flex-col gap-3 rounded-[28px] sm:min-w-[200px]",
+        className,
+      )}
       onHoverStart={prefetchMovieDetails}
       onFocusCapture={prefetchMovieDetails}
     >
@@ -199,10 +204,10 @@ const MovieCard = ({ movie, index }: MovieCardProps) => {
           className="space-y-1"
           onClick={() => navigate(`/movie/${movie.slug}`)}
         >
-          <h3 className="line-clamp-2 text-sm font-bold leading-5 text-foreground">
+          <h3 className="min-h-[2.5rem] line-clamp-2 text-sm font-bold leading-5 text-foreground">
             {movie.name}
           </h3>
-          <p className="line-clamp-1 text-xs text-muted-foreground">
+          <p className="min-h-4 line-clamp-1 text-xs text-muted-foreground">
             {movie.episodeCurrent || "Đang cập nhật"}
           </p>
         </div>

@@ -1,12 +1,19 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import HeroSection from "@/shared/components/Banner/HeroSection";
 import ContinueWatchingRow from "@/shared/components/Row/ContinueWatchingRow";
 import MovieRow from "@/shared/components/Row/MovieRow";
-import FeaturedCard from "@/shared/components/FeaturedCard";
+import EditorialPick from "@/shared/components/EditorialPick";
 import MovieCardSkeleton from "@/shared/components/CardFilm/MovieCardSkeleton";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
+import {
+  buildCatalogHref,
+  CATALOG_LATEST_SOURCE,
+  CATALOG_LATEST_VERSION,
+} from "@/shared/lib/catalog";
+import type { MovieSummary } from "@/shared/types/api";
 
 const HomeRowSkeleton = ({ title }: { title: string }) => (
   <section className="relative pb-6 pt-8">
@@ -25,25 +32,61 @@ const HomeRowSkeleton = ({ title }: { title: string }) => (
   </section>
 );
 
-const FeaturedCardSkeleton = () => (
-  <section className="layout-margin relative my-10 overflow-hidden rounded-xl">
-    <Skeleton className="h-[420px] w-full md:h-[500px] lg:h-[560px]" />
-    <div className="absolute bottom-0 left-0 right-0 space-y-4 p-6 md:p-10">
-      <div className="flex gap-2">
-        <Skeleton className="h-6 w-12 rounded" />
-        <Skeleton className="h-6 w-14 rounded" />
-        <Skeleton className="h-6 w-24 rounded" />
+const EditorialPickSkeleton = () => (
+  <section className="layout-margin my-10 overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.03] p-6 md:p-8">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-40 rounded-full" />
+        <div className="space-y-3">
+          <Skeleton className="h-11 w-4/5" />
+          <Skeleton className="h-5 w-2/5" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-4/6" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton
+              key={`editorial-meta-${index}`}
+              className="h-24 w-full rounded-[24px]"
+            />
+          ))}
+        </div>
+        <div className="flex gap-3">
+          <Skeleton className="h-12 w-32 rounded-2xl" />
+          <Skeleton className="h-12 w-28 rounded-2xl" />
+        </div>
       </div>
-      <Skeleton className="h-9 w-72 max-w-[80%]" />
-      <Skeleton className="h-4 w-80 max-w-[90%]" />
-      <Skeleton className="h-4 w-64 max-w-[75%]" />
-      <div className="flex gap-3 pt-2">
-        <Skeleton className="h-11 w-32 rounded-lg" />
-        <Skeleton className="h-11 w-28 rounded-lg" />
+      <div className="relative overflow-hidden rounded-[30px]">
+        <Skeleton className="h-[380px] w-full" />
+        <div className="absolute right-5 top-5 hidden lg:block">
+          <Skeleton className="h-64 w-44 rounded-[24px]" />
+        </div>
       </div>
     </div>
   </section>
 );
+
+const mergeUniqueMovies = (...groups: Array<MovieSummary[] | undefined>) => {
+  const seen = new Set<string>();
+  const merged: MovieSummary[] = [];
+
+  groups.forEach((group) => {
+    group?.forEach((movie) => {
+      if (!movie.slug || seen.has(movie.slug)) {
+        return;
+      }
+
+      seen.add(movie.slug);
+      merged.push(movie);
+    });
+  });
+
+  return merged;
+};
 
 const HomePage = () => {
   const { token } = useAuth();
@@ -61,6 +104,57 @@ const HomePage = () => {
   const isInitialLoading = isLoading && !data;
   const hasErrorWithoutData = Boolean(error && !data);
   const continueWatchingItems = (historyQuery.data ?? []).slice(0, 8);
+  const topTenMovies = useMemo(
+    () =>
+      mergeUniqueMovies(
+        data?.latest,
+        data?.series,
+        data?.single,
+        data?.tvShows,
+        data?.animation,
+      ).slice(0, 10),
+    [data],
+  );
+  const editorialMovie = useMemo(() => {
+    const topSlug = topTenMovies[0]?.slug;
+
+    return (
+      mergeUniqueMovies(
+        data?.single,
+        data?.series,
+        data?.animation,
+        data?.tvShows,
+        data?.latest,
+      ).find((movie) => movie.slug !== topSlug) ??
+      topTenMovies[1] ??
+      null
+    );
+  }, [data, topTenMovies]);
+
+  const latestCatalogHref = buildCatalogHref(
+    {
+      source: CATALOG_LATEST_SOURCE,
+      version: CATALOG_LATEST_VERSION,
+    },
+    { includeDefaults: false },
+  );
+  const browseCatalogHref = buildCatalogHref({}, { includeDefaults: false });
+  const seriesCatalogHref = buildCatalogHref(
+    { type: "phim-bo" },
+    { includeDefaults: false },
+  );
+  const singleCatalogHref = buildCatalogHref(
+    { type: "phim-le" },
+    { includeDefaults: false },
+  );
+  const animationCatalogHref = buildCatalogHref(
+    { type: "hoat-hinh" },
+    { includeDefaults: false },
+  );
+  const tvCatalogHref = buildCatalogHref(
+    { type: "tv-shows" },
+    { includeDefaults: false },
+  );
 
   return (
     <div className="bg-background">
@@ -82,12 +176,13 @@ const HomePage = () => {
         {isInitialLoading ? (
           <>
             {token ? <ContinueWatchingRow items={[]} isLoading /> : null}
-            <HomeRowSkeleton title="Xu hướng" />
+            <HomeRowSkeleton title="Top 10 hôm nay" />
+            <HomeRowSkeleton title="Mới cập nhật" />
+            <EditorialPickSkeleton />
             <HomeRowSkeleton title="Phim bộ" />
             <HomeRowSkeleton title="Phim lẻ" />
             <HomeRowSkeleton title="Hoạt hình" />
             <HomeRowSkeleton title="Chương trình TV" />
-            <FeaturedCardSkeleton />
           </>
         ) : (
           <>
@@ -97,13 +192,50 @@ const HomePage = () => {
                 isLoading={historyQuery.isLoading && !historyQuery.data}
               />
             ) : null}
-            <MovieRow title="Xu hướng" movies={data?.latest ?? []} />
-            <MovieRow title="Phim bộ" movies={data?.series ?? []} />
-            <MovieRow title="Phim lẻ" movies={data?.single ?? []} />
-            <MovieRow title="Hoạt hình" movies={data?.animation ?? []} />
-            <MovieRow title="Chương trình TV" movies={data?.tvShows ?? []} />
-            <FeaturedCard
-              movie={data?.latest?.[1] ?? data?.series?.[0] ?? null}
+
+            <MovieRow
+              title="Top 10 hôm nay"
+              subtitle="10 lựa chọn nổi bật được ưu tiên trên trang chủ hôm nay, gom từ các kho phim đang được cập nhật mạnh nhất."
+              movies={topTenMovies}
+              variant="rank"
+              viewAllHref={browseCatalogHref}
+            />
+
+            <MovieRow
+              title="Mới cập nhật"
+              subtitle="Những phim vừa được đẩy lên feed mới nhất để bạn mở ngay khi cần một lựa chọn nhanh."
+              movies={data?.latest ?? []}
+              viewAllHref={latestCatalogHref}
+            />
+
+            <EditorialPick movie={editorialMovie} />
+
+            <MovieRow
+              title="Phim bộ"
+              subtitle="Các series nổi bật để theo dõi dài hơi với nhịp xem liên tục theo từng tập."
+              movies={data?.series ?? []}
+              viewAllHref={seriesCatalogHref}
+            />
+
+            <MovieRow
+              title="Phim lẻ"
+              subtitle="Những phim xem trọn vẹn trong một lần, phù hợp khi bạn muốn vào phim nhanh và gọn."
+              movies={data?.single ?? []}
+              viewAllHref={singleCatalogHref}
+            />
+
+            <MovieRow
+              title="Hoạt hình"
+              subtitle="Kho hoạt hình từ nhiều phong cách kể chuyện, phù hợp cả xem giải trí lẫn binge-watch."
+              movies={data?.animation ?? []}
+              viewAllHref={animationCatalogHref}
+            />
+
+            <MovieRow
+              title="Chương trình TV"
+              subtitle="Talk show, reality và các format giải trí nhiều tập để đổi nhịp sau các hàng phim truyện."
+              movies={data?.tvShows ?? []}
+              viewAllHref={tvCatalogHref}
             />
           </>
         )}
