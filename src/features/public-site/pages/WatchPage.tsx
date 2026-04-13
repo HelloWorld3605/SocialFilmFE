@@ -40,6 +40,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { cn } from "@/shared/utils/utils";
@@ -123,6 +126,7 @@ const appendAutoplayParam = (url: string | undefined) => {
 };
 
 const PLAYBACK_SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
+const SLEEP_TIMER_MINUTE_OPTIONS = [5, 10, 15, 20, 30, 45, 60] as const;
 
 type SaveHistoryReason =
   | "EMBED_OPEN"
@@ -131,6 +135,15 @@ type SaveHistoryReason =
   | "ENDED"
   | "BACKGROUND"
   | "EXIT";
+
+type PlaybackFeedbackAction = "play" | "pause";
+type SleepTimerSetting =
+  | { mode: "off" }
+  | { mode: "minutes"; minutes: number; endsAt: number }
+  | { mode: "video-end" };
+
+const formatPlaybackRateLabel = (rate: number) =>
+  rate === 1 ? "Bình thường" : `${rate}x`;
 
 const formatPlayerTime = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -279,6 +292,10 @@ const WatchPage = () => {
   const resumeKeyRef = useRef<string | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const controlsHideTimeoutRef = useRef<number | null>(null);
+  const playbackFeedbackHideTimeoutRef = useRef<number | null>(null);
+  const playbackFeedbackFrameRef = useRef<number | null>(null);
+  const sleepTimerTimeoutRef = useRef<number | null>(null);
+  const sleepTimerTickIntervalRef = useRef<number | null>(null);
   const persistProgressRef = useRef<
     | ((reason?: SaveHistoryReason, options?: { keepalive?: boolean }) => void)
     | null
@@ -304,6 +321,13 @@ const WatchPage = () => {
   const [isInteractingWithControls, setIsInteractingWithControls] =
     useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [playbackFeedback, setPlaybackFeedback] =
+    useState<PlaybackFeedbackAction | null>(null);
+  const [isPlaybackFeedbackVisible, setIsPlaybackFeedbackVisible] =
+    useState(false);
+  const [sleepTimerSetting, setSleepTimerSetting] =
+    useState<SleepTimerSetting>({ mode: "off" });
+  const [sleepTimerNow, setSleepTimerNow] = useState(() => Date.now());
 
   const movieQuery = useQuery({
     queryKey: ["movie", slug],
@@ -412,6 +436,72 @@ const WatchPage = () => {
     if (controlsHideTimeoutRef.current !== null) {
       window.clearTimeout(controlsHideTimeoutRef.current);
       controlsHideTimeoutRef.current = null;
+    }
+  };
+
+  const clearPlaybackFeedbackTimers = () => {
+    if (playbackFeedbackHideTimeoutRef.current !== null) {
+      window.clearTimeout(playbackFeedbackHideTimeoutRef.current);
+      playbackFeedbackHideTimeoutRef.current = null;
+    }
+
+    if (playbackFeedbackFrameRef.current !== null) {
+      window.cancelAnimationFrame(playbackFeedbackFrameRef.current);
+      playbackFeedbackFrameRef.current = null;
+    }
+  };
+
+  const clearSleepTimerTimeout = () => {
+    if (sleepTimerTimeoutRef.current !== null) {
+      window.clearTimeout(sleepTimerTimeoutRef.current);
+      sleepTimerTimeoutRef.current = null;
+    }
+  };
+
+  const clearSleepTimerTickInterval = () => {
+    if (sleepTimerTickIntervalRef.current !== null) {
+      window.clearInterval(sleepTimerTickIntervalRef.current);
+      sleepTimerTickIntervalRef.current = null;
+    }
+  };
+
+  const showPlaybackFeedback = (action: PlaybackFeedbackAction) => {
+    clearPlaybackFeedbackTimers();
+    setPlaybackFeedback(action);
+    setIsPlaybackFeedbackVisible(false);
+
+    playbackFeedbackFrameRef.current = window.requestAnimationFrame(() => {
+      setIsPlaybackFeedbackVisible(true);
+      playbackFeedbackFrameRef.current = null;
+      playbackFeedbackHideTimeoutRef.current = window.setTimeout(() => {
+        setIsPlaybackFeedbackVisible(false);
+        playbackFeedbackHideTimeoutRef.current = null;
+      }, 220);
+    });
+  };
+
+  const clearSleepTimer = () => {
+    clearSleepTimerTimeout();
+    clearSleepTimerTickInterval();
+    setSleepTimerSetting({ mode: "off" });
+    setSleepTimerNow(Date.now());
+  };
+
+  const triggerSleepTimer = () => {
+    clearSleepTimerTimeout();
+    clearSleepTimerTickInterval();
+    setSleepTimerSetting({ mode: "off" });
+    setSleepTimerNow(Date.now());
+
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    revealControls();
+    if (!video.paused && !video.ended) {
+      showPlaybackFeedback("pause");
+      video.pause();
     }
   };
 
@@ -607,9 +697,56 @@ const WatchPage = () => {
     setIsInteractingWithControls(false);
     setIsPointerOverPlayer(false);
     setIsSettingsOpen(false);
+    setPlaybackFeedback(null);
+    setIsPlaybackFeedbackVisible(false);
+    clearPlaybackFeedbackTimers();
+    clearSleepTimerTimeout();
+    clearSleepTimerTickInterval();
+    setSleepTimerSetting({ mode: "off" });
+    setSleepTimerNow(Date.now());
     isProgressScrubbingRef.current = false;
     progressWasPlayingRef.current = false;
   }, [activeSelection?.episodeIndex, activeSelection?.serverIndex, slug]);
+
+  useEffect(() => {
+    clearSleepTimerTickInterval();
+
+    if (sleepTimerSetting.mode !== "minutes") {
+      return;
+    }
+
+    setSleepTimerNow(Date.now());
+    sleepTimerTickIntervalRef.current = window.setInterval(() => {
+      setSleepTimerNow(Date.now());
+    }, 1000);
+
+    return () => {
+      clearSleepTimerTickInterval();
+    };
+  }, [sleepTimerSetting]);
+
+  useEffect(() => {
+    clearSleepTimerTimeout();
+
+    if (sleepTimerSetting.mode !== "minutes") {
+      return;
+    }
+
+    const remainingMs = sleepTimerSetting.endsAt - Date.now();
+    if (remainingMs <= 0) {
+      triggerSleepTimer();
+      return;
+    }
+
+    sleepTimerTimeoutRef.current = window.setTimeout(() => {
+      sleepTimerTimeoutRef.current = null;
+      triggerSleepTimer();
+    }, remainingMs);
+
+    return () => {
+      clearSleepTimerTimeout();
+    };
+  }, [sleepTimerSetting]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -751,6 +888,7 @@ const WatchPage = () => {
 
     const handleEnded = () => {
       setIsPlaying(false);
+      clearSleepTimer();
       persistProgress("ENDED");
     };
 
@@ -889,6 +1027,9 @@ const WatchPage = () => {
   useEffect(() => {
     return () => {
       clearControlsHideTimer();
+      clearPlaybackFeedbackTimers();
+      clearSleepTimerTimeout();
+      clearSleepTimerTickInterval();
     };
   }, []);
 
@@ -1035,6 +1176,26 @@ const WatchPage = () => {
     isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
   const showPlayerChrome =
     !prefersInternalPlayer || areControlsVisible || isProgressScrubbing;
+  const selectedQualityLabel = qualityOptions.length
+    ? selectedQuality === -1
+      ? "Tự động"
+      : (qualityOptions.find((option) => option.value === selectedQuality)?.label ??
+        "Tự động")
+    : "Không khả dụng";
+  const sleepTimerRemainingMs =
+    sleepTimerSetting.mode === "minutes"
+      ? Math.max(sleepTimerSetting.endsAt - sleepTimerNow, 0)
+      : 0;
+  const remainingVideoSeconds =
+    duration > 0 ? Math.max(duration - currentTime, 0) : 0;
+  const sleepTimerLabel =
+    sleepTimerSetting.mode === "minutes"
+      ? `Còn ${formatPlayerTime(Math.ceil(sleepTimerRemainingMs / 1000))}`
+      : sleepTimerSetting.mode === "video-end"
+        ? remainingVideoSeconds > 0
+          ? `Hết video (${formatPlayerTime(remainingVideoSeconds)})`
+          : "Hết video"
+        : "Tắt";
 
   const revealControls = () => {
     if (!prefersInternalPlayer) {
@@ -1054,10 +1215,12 @@ const WatchPage = () => {
     revealControls();
 
     if (video.paused || video.ended) {
+      showPlaybackFeedback("play");
       void video.play().catch(() => {});
       return;
     }
 
+    showPlaybackFeedback("pause");
     video.pause();
   };
 
@@ -1167,6 +1330,24 @@ const WatchPage = () => {
     hls.nextLevel = nextQuality;
   };
 
+  const setMinuteSleepTimer = (minutes: number) => {
+    clearSleepTimerTimeout();
+    clearSleepTimerTickInterval();
+    setSleepTimerNow(Date.now());
+    setSleepTimerSetting({
+      mode: "minutes",
+      minutes,
+      endsAt: Date.now() + minutes * 60 * 1000,
+    });
+  };
+
+  const setVideoEndSleepTimer = () => {
+    clearSleepTimerTimeout();
+    clearSleepTimerTickInterval();
+    setSleepTimerNow(Date.now());
+    setSleepTimerSetting({ mode: "video-end" });
+  };
+
   const toggleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
@@ -1242,7 +1423,7 @@ const WatchPage = () => {
                   autoPlay
                   preload="auto"
                   className={cn(
-                    "absolute inset-0 block h-full w-full cursor-pointer bg-black object-contain transition-[filter] duration-200 ease-out motion-reduce:transition-none",
+                    "absolute inset-0 block h-full w-full bg-black object-contain transition-[filter] duration-200 ease-out motion-reduce:transition-none",
                     isProgressScrubbing
                       ? "brightness-[0.72] saturate-75"
                       : "brightness-100",
@@ -1257,6 +1438,24 @@ const WatchPage = () => {
                     isProgressScrubbing ? "opacity-100" : "opacity-0",
                   )}
                 />
+                {playbackFeedback ? (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+                    <div
+                      className={cn(
+                        "flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-500 ease-out",
+                        isPlaybackFeedbackVisible
+                          ? "scale-100 opacity-100"
+                          : "scale-125 opacity-0",
+                      )}
+                    >
+                      {playbackFeedback === "play" ? (
+                        <Play className="ml-1 h-9 w-9 fill-current" />
+                      ) : (
+                        <Pause className="h-9 w-9" />
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div
@@ -1291,15 +1490,15 @@ const WatchPage = () => {
                   ) : null}
                   <PlayerSlider
                     ariaLabel="Tiến trình phát phim"
-                    className="group/progress-slider mb-3"
+                    className="group/progress-slider mb-3 cursor-pointer"
                     disabled={!duration}
                     max={duration || 0}
                     onInteractionEnd={finishProgressScrub}
                     onInteractionStart={beginProgressScrub}
                     onValueCommit={handleProgressCommit}
                     step={0.01}
-                    thumbClassName="group-hover/progress-slider:h-[1.125rem] group-hover/progress-slider:w-[1.125rem]"
-                    trackClassName="transition-[height] duration-200 ease-out group-hover/progress-slider:h-2"
+                    thumbClassName="cursor-pointer group-hover/progress-slider:h-[1.125rem] group-hover/progress-slider:w-[1.125rem]"
+                    trackClassName="cursor-pointer transition-[height] duration-200 ease-out group-hover/progress-slider:h-2"
                     value={progressValue}
                     onValueChange={handleProgressChange}
                   />
@@ -1330,31 +1529,32 @@ const WatchPage = () => {
                         <RotateCw className="h-4 w-4" />
                       </PlayerButton>
 
-                      <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/6 px-2.5 py-1.5 sm:flex">
-                        <button
-                          type="button"
-                          onClick={toggleMute}
-                          title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-                        >
-                          <VolumeIcon className="h-4 w-4" />
-                        </button>
-                        <PlayerSlider
-                          ariaLabel="Âm lượng"
-                          className="w-24"
-                          onInteractionEnd={endControlsInteraction}
-                          onInteractionStart={beginControlsInteraction}
-                          trackClassName="h-1.5 bg-white/15"
-                          thumbClassName="h-3 w-3"
-                          value={isMuted ? 0 : volume * 100}
-                          onValueChange={handleVolumeChange}
-                        />
+                      <div className="hidden items-center gap-2 sm:flex">
+                        <div className="group/volume-pill flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-2.5 py-1.5 transition-colors duration-200 hover:border-white/20 hover:bg-white/10">
+                          <button
+                            type="button"
+                            onClick={toggleMute}
+                            title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+                          >
+                            <VolumeIcon className="h-4 w-4" />
+                          </button>
+                          <PlayerSlider
+                            ariaLabel="Âm lượng"
+                            className="w-24 cursor-pointer"
+                            onInteractionEnd={endControlsInteraction}
+                            onInteractionStart={beginControlsInteraction}
+                            trackClassName="h-1.5 cursor-pointer bg-white/15 transition-[height] duration-200 ease-out group-hover/volume-pill:h-2"
+                            thumbClassName="h-3 w-3 cursor-pointer transition-[width,height] duration-200 ease-out group-hover/volume-pill:h-3.5 group-hover/volume-pill:w-3.5"
+                            value={isMuted ? 0 : volume * 100}
+                            onValueChange={handleVolumeChange}
+                          />
+                        </div>
+                        <div className="rounded-full border border-white/10 bg-white/6 px-3 py-2 text-xs font-medium text-white/75">
+                          {formatPlayerTime(currentTime)} /{" "}
+                          {formatPlayerTime(duration)}
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="order-3 w-full text-center text-xs font-medium text-white/75 sm:order-2 sm:w-auto sm:text-sm">
-                      {formatPlayerTime(currentTime)} /{" "}
-                      {formatPlayerTime(duration)}
                     </div>
 
                     <div className="order-2 flex items-center gap-2 sm:order-3">
@@ -1362,10 +1562,14 @@ const WatchPage = () => {
                         type="button"
                         onClick={toggleMute}
                         title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/8 text-white transition-colors hover:border-red-400/60 hover:bg-white/14 sm:hidden"
+                        className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/8 text-white transition-colors hover:border-red-400/60 hover:bg-white/14 sm:hidden"
                       >
                         <VolumeIcon className="h-4 w-4" />
                       </button>
+                      <div className="rounded-full border border-white/10 bg-white/8 px-3 py-2 text-xs font-medium text-white/75 sm:hidden">
+                        {formatPlayerTime(currentTime)} /{" "}
+                        {formatPlayerTime(duration)}
+                      </div>
 
                       <DropdownMenu
                         modal={false}
@@ -1389,55 +1593,158 @@ const WatchPage = () => {
                         <DropdownMenuContent
                           onCloseAutoFocus={(event) => event.preventDefault()}
                           align="end"
-                          className="w-60 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
+                          portalContainer={isFullscreen ? playerRef.current : undefined}
+                          className="w-64 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
                         >
                           <DropdownMenuLabel className="text-white/60">
-                            Tốc độ phát
+                            Cài đặt trình phát
                           </DropdownMenuLabel>
-                          {PLAYBACK_SPEED_OPTIONS.map((rate) => (
-                            <DropdownMenuItem
-                              key={rate}
-                              onSelect={() => changePlaybackRate(rate)}
-                              className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
-                            >
-                              <span>
-                                {rate === 1 ? "Bình thường" : `${rate}x`}
-                              </span>
-                              {playbackRate === rate ? (
-                                <Check className="ml-auto h-4 w-4 text-red-400" />
-                              ) : null}
-                            </DropdownMenuItem>
-                          ))}
+                          <DropdownMenuSeparator className="bg-white/10" />
 
-                          {qualityOptions.length ? (
-                            <>
-                              <DropdownMenuSeparator className="bg-white/10" />
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
+                              <div className="flex min-w-0 flex-1 items-center gap-4">
+                                <span className="truncate">Tốc độ phát</span>
+                                <span className="ml-auto text-xs text-white/45">
+                                  {formatPlaybackRateLabel(playbackRate)}
+                                </span>
+                              </div>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent
+                              portalContainer={
+                                isFullscreen ? playerRef.current : undefined
+                              }
+                              className="w-60 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
+                            >
                               <DropdownMenuLabel className="text-white/60">
-                                Chất lượng
+                                Tốc độ phát
                               </DropdownMenuLabel>
-                              <DropdownMenuItem
-                                onSelect={() => changeQuality(-1)}
-                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
-                              >
-                                <span>Tự động</span>
-                                {selectedQuality === -1 ? (
-                                  <Check className="ml-auto h-4 w-4 text-red-400" />
-                                ) : null}
-                              </DropdownMenuItem>
-                              {qualityOptions.map((option) => (
+                              {PLAYBACK_SPEED_OPTIONS.map((rate) => (
                                 <DropdownMenuItem
-                                  key={option.value}
-                                  onSelect={() => changeQuality(option.value)}
+                                  key={rate}
+                                  onSelect={() => changePlaybackRate(rate)}
                                   className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
                                 >
-                                  <span>{option.label}</span>
-                                  {selectedQuality === option.value ? (
+                                  <span>{formatPlaybackRateLabel(rate)}</span>
+                                  {playbackRate === rate ? (
                                     <Check className="ml-auto h-4 w-4 text-red-400" />
                                   ) : null}
                                 </DropdownMenuItem>
                               ))}
-                            </>
-                          ) : null}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
+                              <div className="flex min-w-0 flex-1 items-center gap-4">
+                                <span className="truncate">Chất lượng</span>
+                                <span className="ml-auto text-xs text-white/45">
+                                  {selectedQualityLabel}
+                                </span>
+                              </div>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent
+                              portalContainer={
+                                isFullscreen ? playerRef.current : undefined
+                              }
+                              className="w-60 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
+                            >
+                              <DropdownMenuLabel className="text-white/60">
+                                Chất lượng
+                              </DropdownMenuLabel>
+                              {qualityOptions.length ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onSelect={() => changeQuality(-1)}
+                                    className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                                  >
+                                    <span>Tự động</span>
+                                    {selectedQuality === -1 ? (
+                                      <Check className="ml-auto h-4 w-4 text-red-400" />
+                                    ) : null}
+                                  </DropdownMenuItem>
+                                  {qualityOptions.map((option) => (
+                                    <DropdownMenuItem
+                                      key={option.value}
+                                      onSelect={() => changeQuality(option.value)}
+                                      className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                                    >
+                                      <span>{option.label}</span>
+                                      {selectedQuality === option.value ? (
+                                        <Check className="ml-auto h-4 w-4 text-red-400" />
+                                      ) : null}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </>
+                              ) : (
+                                <DropdownMenuItem
+                                  disabled
+                                  className="rounded-xl px-3 py-2 text-white/45"
+                                >
+                                  Không có lựa chọn chất lượng
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10">
+                              <div className="flex min-w-0 flex-1 items-center gap-4">
+                                <span className="truncate">Hẹn giờ ngủ</span>
+                                <span className="ml-auto text-xs text-white/45">
+                                  {sleepTimerLabel}
+                                </span>
+                              </div>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent
+                              portalContainer={
+                                isFullscreen ? playerRef.current : undefined
+                              }
+                              className="w-64 rounded-2xl border border-white/10 bg-black/95 p-2 text-white shadow-2xl backdrop-blur-2xl"
+                            >
+                              <DropdownMenuLabel className="text-white/60">
+                                Hẹn giờ ngủ
+                              </DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onSelect={clearSleepTimer}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <span>Tắt hẹn giờ</span>
+                                {sleepTimerSetting.mode === "off" ? (
+                                  <Check className="ml-auto h-4 w-4 text-red-400" />
+                                ) : null}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              {SLEEP_TIMER_MINUTE_OPTIONS.map((minutes) => (
+                                <DropdownMenuItem
+                                  key={minutes}
+                                  onSelect={() => setMinuteSleepTimer(minutes)}
+                                  className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                                >
+                                  <span>{minutes} phút</span>
+                                  {sleepTimerSetting.mode === "minutes" &&
+                                  sleepTimerSetting.minutes === minutes ? (
+                                    <Check className="ml-auto h-4 w-4 text-red-400" />
+                                  ) : null}
+                                </DropdownMenuItem>
+                              ))}
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              <DropdownMenuItem
+                                onSelect={setVideoEndSleepTimer}
+                                className="rounded-xl px-3 py-2 text-white focus:bg-white/10 focus:text-white"
+                              >
+                                <span>
+                                  Hết video
+                                  {remainingVideoSeconds > 0
+                                    ? ` (${formatPlayerTime(remainingVideoSeconds)})`
+                                    : ""}
+                                </span>
+                                {sleepTimerSetting.mode === "video-end" ? (
+                                  <Check className="ml-auto h-4 w-4 text-red-400" />
+                                ) : null}
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
                         </DropdownMenuContent>
                       </DropdownMenu>
 

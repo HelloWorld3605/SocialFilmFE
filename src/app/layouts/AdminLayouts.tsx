@@ -39,7 +39,7 @@ const AdminLayout = () => {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.14),transparent_22%),linear-gradient(180deg,#09090b_0%,#111827_52%,#050816_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-[1680px] flex-col lg:flex-row">
         <aside className="border-b border-white/10 bg-black/30 backdrop-blur-2xl lg:flex lg:w-80 lg:flex-col lg:border-b-0 lg:border-r">
-          <div className="border-b border-white/10 px-6 py-6">
+          <div className="space-y-4 border-b border-white/10 px-6 py-6">
             <Link to="/admin/overview" className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                 <ShieldCheck className="h-6 w-6" />
@@ -53,6 +53,16 @@ const AdminLayout = () => {
                 </h1>
               </div>
             </Link>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full justify-start border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
+            >
+              <Link to="/">
+                <Clapperboard className="h-4 w-4" />
+                <span>Về trang phim</span>
+              </Link>
+            </Button>
           </div>
 
           <div className="flex-1 space-y-8 px-4 py-6">
@@ -114,16 +124,6 @@ const AdminLayout = () => {
           </div>
 
           <div className="space-y-3 border-t border-white/10 px-4 py-4">
-            <Button
-              asChild
-              variant="outline"
-              className="w-full justify-start border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
-            >
-              <Link to="/">
-                <Clapperboard className="h-4 w-4" />
-                <span>Về trang phim</span>
-              </Link>
-            </Button>
             <Button
               variant="ghost"
               className="w-full justify-start text-white/75 hover:bg-white/[0.08] hover:text-white"
