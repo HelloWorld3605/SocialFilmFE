@@ -1126,7 +1126,7 @@ const WatchPage = () => {
         <div
           ref={playerRef}
           className={cn(
-            "relative h-[clamp(190px,36svh,250px)] w-full bg-black sm:aspect-video sm:h-auto",
+            "relative aspect-video w-full bg-black",
             prefersInternalPlayer && !showPlayerChrome ? "cursor-none" : "",
           )}
           onMouseEnter={() => {
@@ -1164,7 +1164,7 @@ const WatchPage = () => {
                   autoPlay
                   preload="auto"
                   className={cn(
-                    "h-full w-full cursor-pointer bg-black object-cover transition-[filter] duration-200 ease-out motion-reduce:transition-none",
+                    "absolute inset-0 block h-full w-full cursor-pointer bg-black object-contain transition-[filter] duration-200 ease-out motion-reduce:transition-none",
                     isProgressScrubbing
                       ? "brightness-[0.72] saturate-75"
                       : "brightness-100",
@@ -1384,7 +1384,7 @@ const WatchPage = () => {
             <iframe
               src={appendAutoplayParam(episode.link_embed)}
               title={`${movie.name} - ${episode.name || `Tập ${episodeIndex + 1}`}`}
-              className="h-full w-full"
+              className="absolute inset-0 block h-full w-full border-0"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
             />
