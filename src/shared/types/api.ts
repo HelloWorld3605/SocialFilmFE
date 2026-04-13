@@ -38,6 +38,7 @@ export interface AdminDashboardStats {
   verifiedUsers: number;
   newUsersLast7Days: number;
   activeUsersLast7Days: number;
+  pendingRegistrations: number;
   totalWatchHistoryEntries: number;
   watchHistoryLast7Days: number;
   totalWishlistItems: number;
@@ -78,6 +79,14 @@ export interface AdminActivityItem {
   occurredAt: string;
 }
 
+export interface AdminPendingRegistration {
+  id: number;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+  expired: boolean;
+}
+
 export interface AdminRecentWatchItem {
   id: number;
   movieSlug: string;
@@ -105,6 +114,15 @@ export interface AdminOverviewResponse {
   recentActivity: AdminActivityItem[];
   topWatchedMovies: AdminMovieMetric[];
   topWishlistedMovies: AdminMovieMetric[];
+  pendingRegistrations: AdminPendingRegistration[];
+}
+
+export interface AdminPendingRegistrationsResponse {
+  page: number;
+  size: number;
+  totalPages: number;
+  totalItems: number;
+  items: AdminPendingRegistration[];
 }
 
 export interface AdminUsersResponse {
@@ -127,6 +145,10 @@ export interface AdminUpdateUserRequest {
   emailVerified: boolean;
   avatarUrl?: string | null;
   bio?: string | null;
+}
+
+export interface AdminActionResponse {
+  message: string;
 }
 
 export interface UserProfile {

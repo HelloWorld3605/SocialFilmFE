@@ -79,6 +79,12 @@ const AdminDashboardPage = () => {
         icon: Activity,
       },
       {
+        label: "Đang chờ đăng ký",
+        value: stats.pendingRegistrations,
+        meta: "Các email đã bắt đầu đăng ký nhưng chưa hoàn tất xác thực",
+        icon: UserPlus,
+      },
+      {
         label: "Wishlist",
         value: stats.totalWishlistItems,
         meta: `${numberFormatter.format(stats.wishlistItemsLast7Days)} phim mới được lưu trong 7 ngày`,
@@ -249,6 +255,29 @@ const AdminDashboardPage = () => {
                 <p className="text-xs uppercase tracking-[0.24em] text-amber-300">
                   Verified
                 </p>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-white/10 bg-black/25 p-5">
+              <div className="flex items-center gap-3">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-white">Đăng ký chờ xử lý</p>
+                  <p className="text-xs text-white/55">
+                    Mở trang riêng để reset nhanh các email đang pending.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-end justify-between gap-3">
+                <p className="text-4xl font-black text-white">
+                  {numberFormatter.format(overviewQuery.data.stats.pendingRegistrations)}
+                </p>
+                <Link
+                  to="/admin/pending-registrations"
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-medium text-white/75 transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-white"
+                >
+                  Mở trang
+                </Link>
               </div>
             </div>
           </CardContent>

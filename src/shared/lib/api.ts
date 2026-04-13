@@ -1,5 +1,7 @@
 import type {
   AuthResponse,
+  AdminActionResponse,
+  AdminPendingRegistrationsResponse,
   AdminOverviewResponse,
   AdminUpdateUserRequest,
   AdminUserDetailResponse,
@@ -98,12 +100,31 @@ export const api = {
     ),
   adminOverview: (token: string) =>
     request<AdminOverviewResponse>("/admin/overview", { token }),
+  adminPendingRegistrations: (token: string, searchParams: URLSearchParams) =>
+    request<AdminPendingRegistrationsResponse>(
+      `/admin/pending-registrations?${searchParams.toString()}`,
+      { token },
+    ),
   adminUsers: (token: string, searchParams: URLSearchParams) =>
     request<AdminUsersResponse>(`/admin/users?${searchParams.toString()}`, {
       token,
     }),
   adminUser: (token: string, userId: number | string) =>
     request<AdminUserDetailResponse>(`/admin/users/${userId}`, { token }),
+  resetPendingRegistration: (token: string, pendingRegistrationId: number | string) =>
+    request<AdminActionResponse>(
+      `/admin/pending-registrations/${pendingRegistrationId}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    ),
+  resetPendingRegistrationByEmail: (token: string, email: string) =>
+    request<AdminActionResponse>("/admin/pending-registrations", {
+      method: "DELETE",
+      body: { email },
+      token,
+    }),
   updateAdminUser: (
     token: string,
     userId: number | string,

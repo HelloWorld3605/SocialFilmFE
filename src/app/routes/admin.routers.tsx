@@ -10,6 +10,9 @@ const AdminDashboardPage = React.lazy(
 const AdminUsersPage = React.lazy(
   () => import("@/features/admin/pages/AdminUsersPage"),
 );
+const AdminPendingRegistrationsPage = React.lazy(
+  () => import("@/features/admin/pages/AdminPendingRegistrationsPage"),
+);
 
 const AdminRouteFallback = () => (
   <div className="space-y-6">
@@ -41,6 +44,10 @@ const adminRouters = [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: withSuspense(<AdminDashboardPage />) },
       { path: "users", element: withSuspense(<AdminUsersPage />) },
+      {
+        path: "pending-registrations",
+        element: withSuspense(<AdminPendingRegistrationsPage />),
+      },
     ],
   },
 ];

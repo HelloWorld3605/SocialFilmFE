@@ -4,6 +4,7 @@ import {
   ChartColumnBig,
   Clapperboard,
   LogOut,
+  MailCheck,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -22,6 +23,12 @@ const navItems = [
     label: "Người dùng",
     icon: Users,
     description: "Quản lý role và hồ sơ thành viên",
+  },
+  {
+    to: "/admin/pending-registrations",
+    label: "Chờ đăng ký",
+    icon: MailCheck,
+    description: "Reset nhanh các email đang pending",
   },
 ];
 
