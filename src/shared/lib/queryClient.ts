@@ -10,6 +10,7 @@ const PERSISTED_QUERY_ROOTS = new Set([
   "movie",
   "related-category",
   "related-country",
+  "related-year",
 ]);
 
 const canUseStorage = () =>

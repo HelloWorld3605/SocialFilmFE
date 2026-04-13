@@ -16,6 +16,11 @@ import ShareMovieDialog from "@/shared/components/ShareMovieDialog";
 import { buildWatchUrl } from "@/shared/lib/watch";
 import type { MovieSummary } from "@/shared/types/api";
 
+const INITIAL_SIMILAR_MOVIES = 6;
+const SIMILAR_MOVIES_STEP = 6;
+const SIMILAR_MOVIE_FETCH_LIMIT = 24;
+const MAX_SIMILAR_MOVIES = 18;
+
 const stripHtml = (value: unknown) =>
   typeof value === "string" ? value.replace(/<[^>]+>/g, "").trim() : "";
 
@@ -58,7 +63,7 @@ const buildRelatedParams = (
 ) => {
   const params = new URLSearchParams({
     page: "1",
-    limit: "18",
+    limit: String(SIMILAR_MOVIE_FETCH_LIMIT),
     sort_field: "modified.time",
     sort_type: "desc",
   });
@@ -80,6 +85,9 @@ const MovieDetail = () => {
   const [imageError, setImageError] = useState(false);
   const [showAllActors, setShowAllActors] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [visibleSimilarCount, setVisibleSimilarCount] = useState(
+    INITIAL_SIMILAR_MOVIES,
+  );
 
   const movieQuery = useQuery({
     queryKey: ["movie", slug],
@@ -161,6 +169,7 @@ const MovieDetail = () => {
 
   useEffect(() => {
     setShowAllActors(false);
+    setVisibleSimilarCount(INITIAL_SIMILAR_MOVIES);
   }, [slug]);
 
   const directors = useMemo(() => {
@@ -224,6 +233,25 @@ const MovieDetail = () => {
     staleTime: 1000 * 60 * 5,
   });
 
+  const relatedYearQuery = useQuery({
+    queryKey: [
+      "related-year",
+      releaseYear,
+      relatedCategorySlugs[0],
+      primaryCountrySlug,
+    ],
+    queryFn: () =>
+      api.yearDetail(
+        releaseYear as number,
+        buildRelatedParams({
+          category: relatedCategorySlugs[0] ?? undefined,
+          country: primaryCountrySlug ?? undefined,
+        }),
+      ),
+    enabled: Boolean(releaseYear),
+    staleTime: 1000 * 60 * 5,
+  });
+
   const similarMovies = useMemo(() => {
     if (!movie) return [];
 
@@ -233,14 +261,41 @@ const MovieDetail = () => {
     const currentCountries = new Set(
       (movie.countries ?? []).map((country) => country.toLowerCase()),
     );
-    const ranked = new Map<string, { item: MovieSummary; score: number }>();
+    const ranked = new Map<
+      string,
+      {
+        item: MovieSummary;
+        sourceScore: number;
+        score: number;
+        sharedCategories: number;
+        sharedCountry: boolean;
+        sameYear: boolean;
+        sameType: boolean;
+        sameLang: boolean;
+        matchedSources: Set<string>;
+      }
+    >();
 
-    const applyCandidate = (item: MovieSummary, sourceBoost: number) => {
+    const applyCandidate = (
+      item: MovieSummary,
+      sourceKey: string,
+      sourceBoost: number,
+    ) => {
       if (item.slug === movie.slug) {
         return;
       }
 
-      const current = ranked.get(item.slug) ?? { item, score: 0 };
+      const current = ranked.get(item.slug) ?? {
+        item,
+        sourceScore: 0,
+        score: 0,
+        sharedCategories: 0,
+        sharedCountry: false,
+        sameYear: false,
+        sameType: false,
+        sameLang: false,
+        matchedSources: new Set<string>(),
+      };
       const sharedCategories = (item.categories ?? []).filter((category) =>
         currentCategories.has(category.toLowerCase()),
       ).length;
@@ -249,55 +304,106 @@ const MovieDetail = () => {
       );
 
       current.item = item;
-      current.score += sourceBoost;
-      current.score += sharedCategories * 3;
-
-      if (sharedCountry) {
-        current.score += 2;
+      if (!current.matchedSources.has(sourceKey)) {
+        current.matchedSources.add(sourceKey);
+        current.sourceScore += sourceBoost;
       }
 
-      if (releaseYear && item.year === releaseYear) {
-        current.score += 1.5;
-      }
-
-      if (movie.type && item.type === movie.type) {
-        current.score += 1;
-      }
-
-      if (movie.lang && item.lang === movie.lang) {
-        current.score += 0.5;
-      }
+      current.sharedCategories = Math.max(
+        current.sharedCategories,
+        sharedCategories,
+      );
+      current.sharedCountry = current.sharedCountry || sharedCountry;
+      current.sameYear =
+        current.sameYear || Boolean(releaseYear && item.year === releaseYear);
+      current.sameType =
+        current.sameType || Boolean(movie.type && item.type === movie.type);
+      current.sameLang =
+        current.sameLang || Boolean(movie.lang && item.lang === movie.lang);
+      current.score =
+        current.sourceScore +
+        current.sharedCategories * 4 +
+        (current.sharedCountry ? 2.5 : 0) +
+        (current.sameYear ? 2 : 0) +
+        (current.sameType ? 1.5 : 0) +
+        (current.sameLang ? 0.5 : 0);
 
       ranked.set(item.slug, current);
     };
 
     relatedCategoryQueries.forEach((query, index) => {
-      const sourceBoost = index === 0 ? 5 : 4;
+      const sourceBoost = index === 0 ? 5.5 : 4.5 - index * 0.25;
       (query.data?.items ?? []).forEach((item) =>
-        applyCandidate(item, sourceBoost),
+        applyCandidate(
+          item,
+          `category:${relatedCategorySlugs[index]}`,
+          sourceBoost,
+        ),
       );
     });
 
     (relatedCountryQuery.data?.items ?? []).forEach((item) =>
-      applyCandidate(item, 3),
+      applyCandidate(item, `country:${primaryCountrySlug}`, 3.5),
+    );
+
+    (relatedYearQuery.data?.items ?? []).forEach((item) =>
+      applyCandidate(item, `year:${releaseYear}`, 3),
     );
 
     return Array.from(ranked.values())
+      .filter(
+        (entry) =>
+          entry.sharedCategories > 0 || entry.sharedCountry || entry.sameYear,
+      )
       .sort(
         (left, right) =>
           right.score - left.score ||
+          right.matchedSources.size - left.matchedSources.size ||
           Number(right.item.year ?? 0) - Number(left.item.year ?? 0) ||
           left.item.name.localeCompare(right.item.name, "vi"),
       )
       .map((entry) => entry.item)
-      .slice(0, 6);
+      .slice(0, MAX_SIMILAR_MOVIES);
   }, [
     categories,
     movie,
+    primaryCountrySlug,
     releaseYear,
+    relatedCategorySlugs,
     relatedCategoryQueries,
     relatedCountryQuery.data?.items,
+    relatedYearQuery.data?.items,
   ]);
+
+  const visibleSimilarMovies = useMemo(
+    () => similarMovies.slice(0, visibleSimilarCount),
+    [similarMovies, visibleSimilarCount],
+  );
+
+  const hasMoreSimilarMovies = visibleSimilarCount < similarMovies.length;
+  const canCollapseSimilarMovies =
+    similarMovies.length > INITIAL_SIMILAR_MOVIES &&
+    visibleSimilarCount > INITIAL_SIMILAR_MOVIES;
+  const similarMoviesLoading =
+    relatedCategoryQueries.some((query) => query.isLoading) ||
+    relatedCountryQuery.isLoading ||
+    relatedYearQuery.isLoading;
+
+  const similarMovieSignals = useMemo(() => {
+    const signals: string[] = [];
+
+    if (relatedCategorySlugs.length) {
+      signals.push(`ưu tiên ${relatedCategorySlugs.length} thể loại gần nhất`);
+    }
+    if (primaryCountrySlug) {
+      signals.push("khớp quốc gia");
+    }
+    if (releaseYear) {
+      signals.push(`cùng năm ${releaseYear}`);
+    }
+
+    return signals;
+  }, [primaryCountrySlug, releaseYear, relatedCategorySlugs.length]);
 
   if (movieQuery.isLoading) {
     return (
@@ -563,24 +669,60 @@ const MovieDetail = () => {
           </motion.div>
         </div>
 
-        {similarMovies.length > 0 ? (
+        {similarMovies.length > 0 || similarMoviesLoading ? (
           <div className="mt-16">
             <div className="mb-6 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-2xl font-bold tracking-wide text-foreground">
-                <Film className="h-5 w-5 text-primary" /> Phim tương tự
-              </h3>
+              <div className="space-y-2">
+                <h3 className="flex items-center gap-2 text-2xl font-bold tracking-wide text-foreground">
+                  <Film className="h-5 w-5 text-primary" /> Phim tương tự
+                </h3>
+                {similarMovieSignals.length ? (
+                  <p className="text-sm text-muted-foreground">
+                    Gợi ý dựa trên {similarMovieSignals.join(", ")}.
+                  </p>
+                ) : null}
+              </div>
+              {similarMovies.length ? (
+                <span className="rounded-full border border-border bg-secondary/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {similarMovies.length} đề xuất
+                </span>
+              ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {similarMovies.map((item, index) => (
-                <div
-                  key={item.slug}
-                  onClick={() => navigate(`/movie/${item.slug}`)}
-                  className="cursor-pointer"
-                >
-                  <MovieCard movie={item} index={index} />
+            {visibleSimilarMovies.length ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {visibleSimilarMovies.map((item, index) => (
+                    <MovieCard key={item.slug} movie={item} index={index} />
+                  ))}
                 </div>
-              ))}
-            </div>
+                {hasMoreSimilarMovies || canCollapseSimilarMovies ? (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleSimilarCount((current) =>
+                          hasMoreSimilarMovies
+                            ? Math.min(
+                                current + SIMILAR_MOVIES_STEP,
+                                similarMovies.length,
+                              )
+                            : INITIAL_SIMILAR_MOVIES,
+                        )
+                      }
+                      className="rounded-full border border-primary/30 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                    >
+                      {hasMoreSimilarMovies
+                        ? `Xem thêm (+${Math.min(SIMILAR_MOVIES_STEP, similarMovies.length - visibleSimilarCount)})`
+                        : "Thu gọn"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : similarMoviesLoading ? (
+              <div className="rounded-3xl border border-border bg-secondary/20 px-5 py-6 text-sm text-muted-foreground">
+                Đang tối ưu danh sách gợi ý phù hợp cho phim này...
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

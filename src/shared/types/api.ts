@@ -12,6 +12,8 @@ export interface MovieSummary {
   categories?: string[];
   countries?: string[];
   tmdbId?: number | null;
+  sourceId?: string | null;
+  modifiedTime?: string | null;
 }
 
 export interface PagedMovieResponse {

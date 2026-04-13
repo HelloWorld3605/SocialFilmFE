@@ -81,19 +81,22 @@ const ProfilePage = () => {
       <PageNavigation
         backTo="/"
         backLabel="Trang chủ"
-        items={[
-          { label: "Trang chủ", to: "/" },
-          { label: "Hồ sơ người dùng" },
-        ]}
+        items={[{ label: "Trang chủ", to: "/" }, { label: "Hồ sơ người dùng" }]}
       />
 
       <div className="rounded-[32px] border border-white/10 bg-white/5 p-8">
         <p className="text-sm uppercase tracking-[0.3em] text-primary">Hồ sơ</p>
-        <h1 className="mt-2 text-3xl font-black text-white">Hồ sơ người dùng</h1>
+        <h1 className="mt-2 text-3xl font-black text-white">
+          Hồ sơ người dùng
+        </h1>
         <div className="mt-6 flex items-center gap-5 rounded-[28px] border border-white/10 bg-black/20 p-5">
           <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-white/10">
             {avatarUrl ? (
-              <img src={avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+              <img
+                src={avatarUrl}
+                alt={user.fullName}
+                className="h-full w-full object-cover"
+              />
             ) : (
               <span className="text-3xl font-black text-white">
                 {user.fullName.slice(0, 1).toUpperCase()}
@@ -101,9 +104,6 @@ const ProfilePage = () => {
             )}
           </div>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Tải ảnh qua Cloudinary giống `social-map`, sau đó lưu hồ sơ để cập nhật.
-            </p>
             <label className="inline-flex cursor-pointer rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm text-white">
               {uploading ? "Đang tải lên..." : "Chọn ảnh đại diện"}
               <input

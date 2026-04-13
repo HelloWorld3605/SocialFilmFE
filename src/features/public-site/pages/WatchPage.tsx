@@ -259,7 +259,8 @@ const WatchPage = () => {
   const hlsRef = useRef<Hls | null>(null);
   const controlsHideTimeoutRef = useRef<number | null>(null);
   const persistProgressRef = useRef<
-    ((reason?: SaveHistoryReason, options?: { keepalive?: boolean }) => void) | null
+    | ((reason?: SaveHistoryReason, options?: { keepalive?: boolean }) => void)
+    | null
   >(null);
   const lastVolumeRef = useRef(1);
   const isProgressScrubbingRef = useRef(false);
@@ -665,7 +666,9 @@ const WatchPage = () => {
         })
         .catch(() => {
           if (!isWatchPageMountedRef.current) {
-            void queryClient.invalidateQueries({ queryKey: ["history", token] });
+            void queryClient.invalidateQueries({
+              queryKey: ["history", token],
+            });
           }
         });
     };
@@ -1210,7 +1213,7 @@ const WatchPage = () => {
                   ) : null}
                   <PlayerSlider
                     ariaLabel="Tiến trình phát phim"
-                    className="group/progress-slider mb-2"
+                    className="group/progress-slider mb-3"
                     disabled={!duration}
                     max={duration || 0}
                     onInteractionEnd={finishProgressScrub}
@@ -1232,14 +1235,14 @@ const WatchPage = () => {
                         <RotateCcw className="h-4 w-4" />
                       </PlayerButton>
                       <PlayerButton
-                        className="h-11 w-11 bg-red-600 text-white hover:bg-red-500"
+                        className="h-10 w-10 bg-red-600 text-white hover:bg-red-500"
                         onClick={togglePlayback}
                         title={isPlaying ? "Tạm dừng" : "Phát"}
                       >
                         {isPlaying ? (
-                          <Pause className="h-5 w-5 fill-current" />
+                          <Pause className="h-4 w-4 fill-current" />
                         ) : (
-                          <Play className="ml-0.5 h-5 w-5 fill-current" />
+                          <Play className="ml-0.5 h-4 w-4 fill-current" />
                         )}
                       </PlayerButton>
                       <PlayerButton

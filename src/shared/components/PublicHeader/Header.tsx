@@ -4,72 +4,70 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { ChevronDown, Heart, LogOut, Menu, Search, Settings2, User, X } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
+import {
+  buildCatalogHref,
+  CATALOG_LATEST_SOURCE,
+  CATALOG_LATEST_VERSION,
+  getCatalogYearValues,
+  normalizeCatalogTypes,
+  normalizeTaxonomyItems,
+  sortTaxonomyItems,
+} from "@/shared/lib/catalog";
 import type { MovieSummary } from "@/shared/types/api";
 
 const SEARCH_AUTOCOMPLETE_DEBOUNCE = 320;
 const RECENT_SEARCHES_STORAGE_KEY = "filmfe.recent-searches.v1";
 const MAX_RECENT_SEARCHES = 6;
 
-const leadingNavItems = [
-  { label: "Phim bộ", href: "/catalog?type=phim-bo", type: "phim-bo" },
-  { label: "Phim lẻ", href: "/catalog?type=phim-le", type: "phim-le" },
+const primaryNavItems = [
+  {
+    label: "Duyệt tìm",
+    href: buildCatalogHref({}, { includeDefaults: false }),
+    mode: "browse" as const,
+    value: "",
+  },
+  {
+    label: "Phim bộ",
+    href: buildCatalogHref({ type: "phim-bo" }, { includeDefaults: false }),
+    mode: "type" as const,
+    value: "phim-bo",
+  },
+  {
+    label: "Phim lẻ",
+    href: buildCatalogHref({ type: "phim-le" }, { includeDefaults: false }),
+    mode: "type" as const,
+    value: "phim-le",
+  },
+  {
+    label: "TV Shows",
+    href: buildCatalogHref({ type: "tv-shows" }, { includeDefaults: false }),
+    mode: "type" as const,
+    value: "tv-shows",
+  },
+  {
+    label: "Hoạt Hình",
+    href: buildCatalogHref({ type: "hoat-hinh" }, { includeDefaults: false }),
+    mode: "type" as const,
+    value: "hoat-hinh",
+  },
+  {
+    label: "Chiếu Rạp",
+    href: buildCatalogHref(
+      { source: CATALOG_LATEST_SOURCE, version: CATALOG_LATEST_VERSION },
+      { includeDefaults: false },
+    ),
+    mode: "source" as const,
+    value: CATALOG_LATEST_SOURCE,
+  },
 ] as const;
 
-const trailingNavItems = [
-  { label: "Hoạt hình", href: "/catalog?type=hoat-hinh", type: "hoat-hinh" },
-  { label: "Chương trình TV", href: "/catalog?type=tv-shows", type: "tv-shows" },
-] as const;
+type TaxonomyMenuKey = "category" | "country" | "year";
 
-type TaxonomyMenuKey = "category" | "country";
-
-interface TaxonomyItem {
-  name: string;
-  slug: string;
+interface HeaderMenuLink {
+  key: string;
+  label: string;
+  href: string;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const unwrapTaxonomyPayload = (payload: unknown): unknown[] => {
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (!isRecord(payload)) {
-    return [];
-  }
-
-  const candidates = [payload.items, payload.data, payload.results];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-    if (isRecord(candidate)) {
-      const nested = unwrapTaxonomyPayload(candidate);
-      if (nested.length) {
-        return nested;
-      }
-    }
-  }
-
-  return [];
-};
-
-const normalizeTaxonomyItems = (payload: unknown): TaxonomyItem[] =>
-  unwrapTaxonomyPayload(payload).flatMap((entry) => {
-    if (!isRecord(entry)) {
-      return [];
-    }
-
-    const name = typeof entry.name === "string" ? entry.name.trim() : "";
-    const slug = typeof entry.slug === "string" ? entry.slug.trim() : "";
-
-    if (!name || !slug) {
-      return [];
-    }
-
-    return [{ name, slug }];
-  });
 
 interface HeaderProps {
   overlay?: boolean;
@@ -163,10 +161,16 @@ export function Header({ overlay = false }: HeaderProps) {
   const taxonomyMenuRef = useRef<HTMLDivElement | null>(null);
   const desktopSearchRef = useRef<HTMLDivElement | null>(null);
   const mobileSearchRef = useRef<HTMLDivElement | null>(null);
-  const currentType = searchParams.get("type") || "phim-bo";
+  const currentTypes = normalizeCatalogTypes(searchParams.getAll("type"));
+  const currentType = currentTypes.length === 1 ? currentTypes[0] : "";
+  const currentSource =
+    searchParams.get("source") === CATALOG_LATEST_SOURCE
+      ? CATALOG_LATEST_SOURCE
+      : "";
   const currentKeyword = searchParams.get("keyword") || "";
   const currentCategory = searchParams.get("category") || "";
   const currentCountry = searchParams.get("country") || "";
+  const currentYear = searchParams.get("year") || "";
   const isCatalogPage = location.pathname === "/catalog";
   const trimmedKeyword = keyword.trim();
   const trimmedDebouncedKeyword = debouncedKeyword.trim();
@@ -199,13 +203,15 @@ export function Header({ overlay = false }: HeaderProps) {
   const categoriesQuery = useQuery({
     queryKey: ["header", "categories"],
     queryFn: () => api.categories(),
-    select: (data) => normalizeTaxonomyItems(data as unknown),
+    select: (data) =>
+      sortTaxonomyItems(normalizeTaxonomyItems(data as unknown), "category"),
     staleTime: 1000 * 60 * 60 * 6,
   });
   const countriesQuery = useQuery({
     queryKey: ["header", "countries"],
     queryFn: () => api.countries(),
-    select: (data) => normalizeTaxonomyItems(data as unknown),
+    select: (data) =>
+      sortTaxonomyItems(normalizeTaxonomyItems(data as unknown), "country"),
     staleTime: 1000 * 60 * 60 * 6,
   });
   const searchSuggestionsQuery = useQuery({
@@ -248,6 +254,42 @@ export function Header({ overlay = false }: HeaderProps) {
       value,
     }));
   }, [recentSearches, suggestionItems, trimmedKeyword]);
+
+  const categoryMenuItems = useMemo<HeaderMenuLink[]>(
+    () =>
+      (categoriesQuery.data ?? []).map((item) => ({
+        key: item.slug,
+        label: item.name,
+        href: buildCatalogHref(
+          { category: item.slug },
+          { includeDefaults: false },
+        ),
+      })),
+    [categoriesQuery.data],
+  );
+
+  const countryMenuItems = useMemo<HeaderMenuLink[]>(
+    () =>
+      (countriesQuery.data ?? []).map((item) => ({
+        key: item.slug,
+        label: item.name,
+        href: buildCatalogHref(
+          { country: item.slug },
+          { includeDefaults: false },
+        ),
+      })),
+    [countriesQuery.data],
+  );
+
+  const yearMenuItems = useMemo<HeaderMenuLink[]>(
+    () =>
+      getCatalogYearValues().map((year) => ({
+        key: year,
+        label: year,
+        href: buildCatalogHref({ year }, { includeDefaults: false }),
+      })),
+    [],
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -338,16 +380,16 @@ export function Header({ overlay = false }: HeaderProps) {
 
   const navigateToSearchResults = (nextKeyword: string) => {
     const normalizedKeyword = nextKeyword.trim();
-    const next = new URLSearchParams();
-
     if (normalizedKeyword) {
-      next.set("keyword", normalizedKeyword);
       persistRecentSearch(normalizedKeyword);
     }
 
-    next.set("type", "phim-bo");
-
-    navigate(`/catalog?${next.toString()}`);
+    navigate(
+      buildCatalogHref(
+        normalizedKeyword ? { keyword: normalizedKeyword } : {},
+        { includeDefaults: false },
+      ),
+    );
     closeSearchPanels();
     setMobileOpen(false);
   };
@@ -401,12 +443,30 @@ export function Header({ overlay = false }: HeaderProps) {
     }
   };
 
-  const isBrowseLinkActive = (type: string) =>
-    isCatalogPage &&
-    !currentKeyword &&
-    !currentCategory &&
-    !currentCountry &&
-    currentType === type;
+  const isPrimaryNavActive = (
+    mode: (typeof primaryNavItems)[number]["mode"],
+    value: string,
+  ) => {
+    if (!isCatalogPage || currentKeyword) {
+      return false;
+    }
+
+    if (mode === "browse") {
+      return (
+        !currentTypes.length &&
+        !currentCategory &&
+        !currentCountry &&
+        !currentYear &&
+        currentSource !== CATALOG_LATEST_SOURCE
+      );
+    }
+
+    if (mode === "source") {
+      return currentSource === value;
+    }
+
+    return currentType === value;
+  };
 
   const navLinkClass = (active: boolean) =>
     `inline-flex items-center gap-1 text-sm font-medium transition-colors ${
@@ -414,7 +474,7 @@ export function Header({ overlay = false }: HeaderProps) {
     }`;
 
   const renderTaxonomyLinks = (
-    items: TaxonomyItem[],
+    items: HeaderMenuLink[],
     key: TaxonomyMenuKey,
     onNavigate: () => void,
   ) => {
@@ -429,17 +489,21 @@ export function Header({ overlay = false }: HeaderProps) {
     return (
       <div
         className={`grid gap-1 overflow-y-auto pr-1 ${
-          key === "category" ? "max-h-80 grid-cols-2" : "max-h-72 grid-cols-1"
+          key === "category"
+            ? "max-h-80 grid-cols-2"
+            : key === "year"
+              ? "max-h-72 grid-cols-3"
+              : "max-h-72 grid-cols-1"
         }`}
       >
         {items.map((item) => (
           <Link
-            key={item.slug}
-            to={`/catalog?type=phim-bo&${key}=${encodeURIComponent(item.slug)}`}
+            key={item.key}
+            to={item.href}
             onClick={onNavigate}
             className="rounded-xl px-3 py-2 text-sm text-white/90 transition-colors hover:bg-white/10 hover:text-white"
           >
-            {item.name}
+            {item.label}
           </Link>
         ))}
       </div>
@@ -607,11 +671,11 @@ export function Header({ overlay = false }: HeaderProps) {
         </Link>
 
         <nav className="hidden shrink-0 items-center gap-5 xl:flex" ref={taxonomyMenuRef}>
-          {leadingNavItems.map((item) => (
+          {primaryNavItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
-              className={navLinkClass(isBrowseLinkActive(item.type))}
+              className={navLinkClass(isPrimaryNavActive(item.mode, item.value))}
             >
               {item.label}
             </Link>
@@ -647,7 +711,7 @@ export function Header({ overlay = false }: HeaderProps) {
                       Không tải được danh sách thể loại.
                     </p>
                   ) : (
-                    renderTaxonomyLinks(categoriesQuery.data ?? [], "category", () =>
+                    renderTaxonomyLinks(categoryMenuItems, "category", () =>
                       setTaxonomyMenuOpen(null),
                     )
                   )}
@@ -686,7 +750,7 @@ export function Header({ overlay = false }: HeaderProps) {
                       Không tải được danh sách quốc gia.
                     </p>
                   ) : (
-                    renderTaxonomyLinks(countriesQuery.data ?? [], "country", () =>
+                    renderTaxonomyLinks(countryMenuItems, "country", () =>
                       setTaxonomyMenuOpen(null),
                     )
                   )}
@@ -694,15 +758,35 @@ export function Header({ overlay = false }: HeaderProps) {
               ) : null}
             </div>
           </div>
-          {trailingNavItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={navLinkClass(isBrowseLinkActive(item.type))}
-            >
-              {item.label}
-            </Link>
-          ))}
+          <div className="relative">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setTaxonomyMenuOpen((current) =>
+                    current === "year" ? null : "year",
+                  )
+                }
+                className={navLinkClass(
+                  taxonomyMenuOpen === "year" || (isCatalogPage && !!currentYear),
+                )}
+              >
+                <span>Năm</span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    taxonomyMenuOpen === "year" ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {taxonomyMenuOpen === "year" ? (
+                <div className="absolute left-0 top-full z-30 w-[18rem] rounded-[26px] border border-white/10 bg-black/90 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl">
+                  {renderTaxonomyLinks(yearMenuItems, "year", () =>
+                    setTaxonomyMenuOpen(null),
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </nav>
 
         <div className="hidden min-w-0 flex-1 justify-end lg:flex">
@@ -828,7 +912,7 @@ export function Header({ overlay = false }: HeaderProps) {
             {renderSearchSuggestions("mobile")}
           </div>
           <div className="flex flex-col gap-3">
-            {leadingNavItems.map((item) => (
+            {primaryNavItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
@@ -866,7 +950,7 @@ export function Header({ overlay = false }: HeaderProps) {
                       Không tải được danh sách thể loại.
                     </p>
                   ) : (
-                    renderTaxonomyLinks(categoriesQuery.data ?? [], "category", () =>
+                    renderTaxonomyLinks(categoryMenuItems, "category", () =>
                       setMobileOpen(false),
                     )
                   )}
@@ -901,23 +985,38 @@ export function Header({ overlay = false }: HeaderProps) {
                       Không tải được danh sách quốc gia.
                     </p>
                   ) : (
-                    renderTaxonomyLinks(countriesQuery.data ?? [], "country", () =>
+                    renderTaxonomyLinks(countryMenuItems, "country", () =>
                       setMobileOpen(false),
                     )
                   )}
                 </div>
               ) : null}
             </div>
-            {trailingNavItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setMobileOpen(false)}
-                className="rounded-xl bg-white/5 px-4 py-3 text-sm text-white"
+            <div className="rounded-2xl bg-white/5">
+              <button
+                type="button"
+                onClick={() =>
+                  setMobileTaxonomyOpen((current) =>
+                    current === "year" ? null : "year",
+                  )
+                }
+                className="flex w-full items-center justify-between px-4 py-3 text-sm text-white"
               >
-                {item.label}
-              </Link>
-            ))}
+                <span>Năm</span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${
+                    mobileTaxonomyOpen === "year" ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {mobileTaxonomyOpen === "year" ? (
+                <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto px-3 pb-3">
+                  {renderTaxonomyLinks(yearMenuItems, "year", () =>
+                    setMobileOpen(false),
+                  )}
+                </div>
+              ) : null}
+            </div>
             {isAuthenticated ? (
               <>
                 <Link

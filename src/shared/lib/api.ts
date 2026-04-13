@@ -104,6 +104,10 @@ export const api = {
     request<PagedMovieResponse>(
       `/catalog/country/${encodeURIComponent(slug)}?${searchParams.toString()}`,
     ),
+  yearDetail: (year: string | number, searchParams: URLSearchParams) =>
+    request<PagedMovieResponse>(
+      `/catalog/year/${encodeURIComponent(String(year))}?${searchParams.toString()}`,
+    ),
   movie: (slug: string) => request<MovieDetailResponse>(`/movies/${slug}`),
   startRegistration: (payload: { email: string }) =>
     request<MessageResponse>("/auth/start-registration", {
