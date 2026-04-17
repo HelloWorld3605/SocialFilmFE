@@ -28,6 +28,7 @@ interface RequestOptions {
   body?: unknown;
   token?: string | null;
   keepalive?: boolean;
+  signal?: AbortSignal;
 }
 
 async function request<T>(
@@ -50,6 +51,7 @@ async function request<T>(
     method: options.method ?? "GET",
     headers,
     keepalive: options.keepalive ?? false,
+    signal: options.signal,
     body: !options.body
       ? undefined
       : isFormData
@@ -88,12 +90,19 @@ async function request<T>(
 
 export const api = {
   home: () => request<HomeResponse>("/catalog/home"),
-  latest: (page = 1, version = "v3") =>
+  latest: (
+    page = 1,
+    version = "v3",
+    options: Pick<RequestOptions, "signal"> = {},
+  ) =>
     request<PagedMovieResponse>(
       `/catalog/latest?page=${page}&version=${version}`,
+      options,
     ),
-  listAll: (searchParams: URLSearchParams) =>
-    request<PagedMovieResponse>(`/catalog/list?${searchParams.toString()}`),
+  listAll: (
+    searchParams: URLSearchParams,
+    options: Pick<RequestOptions, "signal"> = {},
+  ) => request<PagedMovieResponse>(`/catalog/list?${searchParams.toString()}`, options),
   list: (type: string, searchParams: URLSearchParams) =>
     request<PagedMovieResponse>(
       `/catalog/list/${type}?${searchParams.toString()}`,
@@ -135,8 +144,10 @@ export const api = {
       body: payload,
       token,
     }),
-  search: (searchParams: URLSearchParams) =>
-    request<PagedMovieResponse>(`/catalog/search?${searchParams.toString()}`),
+  search: (
+    searchParams: URLSearchParams,
+    options: Pick<RequestOptions, "signal"> = {},
+  ) => request<PagedMovieResponse>(`/catalog/search?${searchParams.toString()}`, options),
   categories: () => request<any>("/catalog/categories"),
   countries: () => request<any>("/catalog/countries"),
   categoryDetail: (slug: string, searchParams: URLSearchParams) =>
@@ -187,7 +198,10 @@ export const api = {
       token,
     });
   },
-  wishlist: (token: string) => request<LibraryMovie[]>("/wishlist", { token }),
+  wishlist: (
+    token: string,
+    options: Pick<RequestOptions, "signal"> = {},
+  ) => request<LibraryMovie[]>("/wishlist", { token, ...options }),
   wishlistState: (token: string, movieSlug: string) =>
     request<WishlistStateResponse>(
       `/wishlist/state?movieSlug=${encodeURIComponent(movieSlug)}`,

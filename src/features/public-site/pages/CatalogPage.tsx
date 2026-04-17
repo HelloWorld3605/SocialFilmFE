@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth } from "@/shared/auth/AuthContext";
 import MovieCard from "@/shared/components/CardFilm/MovieCard";
 import MovieCardSkeleton from "@/shared/components/CardFilm/MovieCardSkeleton";
 import PageNavigation from "@/shared/components/PageNavigation";
@@ -216,8 +217,29 @@ const collapseFullSelection = (
 };
 
 const CATALOG_BROWSE_VIEW_MODE = "browse";
+const CATALOG_QUERY_STALE_TIME = 1000 * 30;
+
+const prepareCatalogRequestParams = (querySignature: string) => {
+  const params = new URLSearchParams(querySignature);
+  if (!params.get("page")) params.set("page", "1");
+  if (!params.get("limit")) {
+    params.set("limit", String(CATALOG_DEFAULT_LIMIT));
+  }
+  if (!params.get("sort_field")) {
+    params.set("sort_field", CATALOG_DEFAULT_SORT_FIELD);
+  }
+  if (!params.get("sort_type")) {
+    params.set("sort_type", CATALOG_DEFAULT_SORT_TYPE);
+  }
+  const normalizedYears = normalizeSingleQueryValue(params.getAll("year"));
+  params.delete("year");
+  normalizedYears.forEach((yearValue) => params.append("year", yearValue));
+  return params;
+};
 
 const CatalogPage = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const querySignature = searchParams.toString();
   const parsedSearchParams = useMemo(
@@ -294,6 +316,13 @@ const CatalogPage = () => {
     select: (data) => sortTaxonomyItems(normalizeTaxonomyItems(data), "country"),
     staleTime: 1000 * 60 * 60 * 6,
   });
+  const wishlistQuery = useQuery({
+    queryKey: ["wishlist", token],
+    queryFn: ({ signal }) => api.wishlist(token as string, { signal }),
+    enabled: Boolean(token),
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
+  });
 
   const yearOptions = useMemo(() => getCatalogYearOptions(), []);
   const effectiveYears = useMemo(
@@ -306,6 +335,37 @@ const CatalogPage = () => {
   const isPresetCatalogView =
     !keyword &&
     (source === CATALOG_LATEST_SOURCE || isTypePresetCatalogView);
+  const wishlistMovieSlugs = useMemo(
+    () => new Set((wishlistQuery.data ?? []).map((item) => item.movieSlug)),
+    [wishlistQuery.data],
+  );
+  const fetchCatalogList = (
+    paramsSignature: string,
+    signal?: AbortSignal,
+  ) => {
+    const params = prepareCatalogRequestParams(paramsSignature);
+    const requestKeyword = params.get("keyword") || "";
+    const requestSource =
+      params.get("source") === CATALOG_LATEST_SOURCE
+        ? CATALOG_LATEST_SOURCE
+        : "";
+    const requestVersion =
+      params.get("version") || CATALOG_LATEST_VERSION;
+    const requestPage = Number(params.get("page") || "1");
+
+    if (requestKeyword) {
+      params.delete("type");
+      params.delete("source");
+      params.delete("version");
+      return api.search(params, { signal });
+    }
+
+    if (requestSource === CATALOG_LATEST_SOURCE) {
+      return api.latest(requestPage, requestVersion, { signal });
+    }
+
+    return api.listAll(params, { signal });
+  };
 
   useEffect(() => {
     setDraftTypes(selectedTypes);
@@ -343,36 +403,10 @@ const CatalogPage = () => {
       sortLangs.join(","),
       page,
     ],
-    queryFn: () => {
-      const params = new URLSearchParams(querySignature);
-      if (!params.get("page")) params.set("page", "1");
-      if (!params.get("limit")) {
-        params.set("limit", String(CATALOG_DEFAULT_LIMIT));
-      }
-      if (!params.get("sort_field")) {
-        params.set("sort_field", CATALOG_DEFAULT_SORT_FIELD);
-      }
-      if (!params.get("sort_type")) {
-        params.set("sort_type", CATALOG_DEFAULT_SORT_TYPE);
-      }
-      const normalizedYears = normalizeSingleQueryValue(params.getAll("year"));
-      params.delete("year");
-      normalizedYears.forEach((yearValue) => params.append("year", yearValue));
-
-      if (keyword) {
-        params.delete("type");
-        params.delete("source");
-        params.delete("version");
-        return api.search(params);
-      }
-
-      if (source === CATALOG_LATEST_SOURCE) {
-        return api.latest(page, version);
-      }
-
-      return api.listAll(params);
-    },
+    queryFn: ({ signal }) => fetchCatalogList(querySignature, signal),
     placeholderData: (previousData) => previousData,
+    staleTime: CATALOG_QUERY_STALE_TIME,
+    refetchOnWindowFocus: false,
   });
 
   const typeOptions = useMemo<FilterOption[]>(
@@ -606,10 +640,69 @@ const CatalogPage = () => {
     1,
   );
   const listItems = listQuery.data?.items ?? [];
-  const isInitialListLoading = listQuery.isPending;
-  const isTransitioningList = listQuery.isPlaceholderData;
-  const shouldShowCatalogSkeleton = isInitialListLoading || isTransitioningList;
+  const isInitialListLoading = listQuery.isPending && listItems.length === 0;
+  const shouldShowCatalogSkeleton = isInitialListLoading;
   const isRefreshingList = listQuery.isFetching && !shouldShowCatalogSkeleton;
+
+  useEffect(() => {
+    if (!listQuery.data || displayCurrentPage >= displayTotalPages) {
+      return;
+    }
+
+    const nextPage = displayCurrentPage + 1;
+    const nextParams = buildCatalogParams({
+      keyword: keyword || null,
+      source: source || null,
+      version: source ? version : null,
+      type: appliedTypes,
+      category: categories.length ? categories : null,
+      country: countries.length ? countries : null,
+      year: effectiveYears.length ? effectiveYears : null,
+      sort_field: sortField,
+      sort_type: sortType,
+      sort_lang: sortLangs.length ? sortLangs : null,
+      mode: shouldPersistBrowseViewMode
+        ? CATALOG_BROWSE_VIEW_MODE
+        : null,
+      page: nextPage,
+    });
+
+    void queryClient.prefetchQuery({
+      queryKey: [
+        "catalog",
+        source,
+        version,
+        selectedTypes.join(","),
+        keyword,
+        categories.join(","),
+        countries.join(","),
+        effectiveYears.join(","),
+        sortField,
+        sortType,
+        sortLangs.join(","),
+        nextPage,
+      ],
+      queryFn: ({ signal }) => fetchCatalogList(nextParams.toString(), signal),
+      staleTime: CATALOG_QUERY_STALE_TIME,
+    });
+  }, [
+    appliedTypes,
+    categories,
+    countries,
+    displayCurrentPage,
+    displayTotalPages,
+    effectiveYears,
+    keyword,
+    listQuery.data,
+    queryClient,
+    selectedTypes,
+    shouldPersistBrowseViewMode,
+    sortField,
+    sortLangs,
+    sortType,
+    source,
+    version,
+  ]);
 
   const filterForm = (
     <form onSubmit={handleApplyFilters} className="space-y-5">
@@ -1069,7 +1162,11 @@ const CatalogPage = () => {
       ) : (
         <div className="relative z-0 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
           {listItems.map((movie) => (
-            <MovieCard key={movie.slug} movie={movie} />
+            <MovieCard
+              key={movie.slug}
+              movie={movie}
+              wishlistMovieSlugs={wishlistMovieSlugs}
+            />
           ))}
         </div>
       )}

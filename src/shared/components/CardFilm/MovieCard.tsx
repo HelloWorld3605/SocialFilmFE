@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,24 +17,27 @@ interface MovieCardProps {
   movie: MovieSummary;
   index?: number;
   className?: string;
+  wishlistMovieSlugs?: ReadonlySet<string>;
 }
 
-const MovieCard = ({ movie, index, className }: MovieCardProps) => {
+const MovieCard = ({
+  movie,
+  index,
+  className,
+  wishlistMovieSlugs,
+}: MovieCardProps) => {
   const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token } = useAuth();
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const hasPrefetchedMovieRef = useRef(false);
   const image = movie.posterUrl || movie.thumbUrl || "";
   const countryText =
     movie.countries?.slice(0, 2).join(" • ") || "Đang cập nhật";
   const prefetchMovieDetails = () => {
-    if (hasPrefetchedMovieRef.current) {
+    if (queryClient.getQueryData(["movie", movie.slug])) {
       return;
     }
 
-    hasPrefetchedMovieRef.current = true;
     void queryClient.prefetchQuery({
       queryKey: ["movie", movie.slug],
       queryFn: () => api.movie(movie.slug),
@@ -42,48 +45,18 @@ const MovieCard = ({ movie, index, className }: MovieCardProps) => {
     });
   };
 
-  useEffect(() => {
-    const node = cardRef.current;
-    if (!node || hasPrefetchedMovieRef.current) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (!firstEntry?.isIntersecting) {
-          return;
-        }
-
-        if (!hasPrefetchedMovieRef.current) {
-          hasPrefetchedMovieRef.current = true;
-          void queryClient.prefetchQuery({
-            queryKey: ["movie", movie.slug],
-            queryFn: () => api.movie(movie.slug),
-            staleTime: 1000 * 60 * 5,
-          });
-        }
-        observer.disconnect();
-      },
-      { rootMargin: "220px 0px" },
-    );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [movie.slug, queryClient]);
-
+  const hasExternalWishlistState = wishlistMovieSlugs !== undefined;
   const wishlistQuery = useQuery({
     queryKey: ["wishlist", token],
-    queryFn: () => api.wishlist(token as string),
-    enabled: Boolean(token),
+    queryFn: ({ signal }) => api.wishlist(token as string, { signal }),
+    enabled: Boolean(token && !hasExternalWishlistState),
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
   });
 
-  const wished = Boolean(
-    wishlistQuery.data?.some((item) => item.movieSlug === movie.slug),
-  );
+  const wished = hasExternalWishlistState
+    ? wishlistMovieSlugs.has(movie.slug)
+    : Boolean(wishlistQuery.data?.some((item) => item.movieSlug === movie.slug));
 
   const wishlistMutation = useMutation({
     mutationFn: async () => {
@@ -127,7 +100,6 @@ const MovieCard = ({ movie, index, className }: MovieCardProps) => {
 
   return (
     <motion.div
-      ref={cardRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: (index ?? 0) * 0.05 }}
@@ -149,6 +121,8 @@ const MovieCard = ({ movie, index, className }: MovieCardProps) => {
               alt={movie.name}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 18vw, (min-width: 640px) 28vw, 45vw"
               onError={() => setImageError(true)}
             />
           ) : (
