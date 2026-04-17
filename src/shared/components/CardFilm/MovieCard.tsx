@@ -27,6 +27,8 @@ const MovieCard = ({ movie, index, className }: MovieCardProps) => {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const hasPrefetchedMovieRef = useRef(false);
   const image = movie.posterUrl || movie.thumbUrl || "";
+  const countryText =
+    movie.countries?.slice(0, 2).join(" • ") || "Đang cập nhật";
   const prefetchMovieDetails = () => {
     if (hasPrefetchedMovieRef.current) {
       return;
@@ -209,6 +211,9 @@ const MovieCard = ({ movie, index, className }: MovieCardProps) => {
           </h3>
           <p className="min-h-4 line-clamp-1 text-xs text-muted-foreground">
             {movie.episodeCurrent || "Đang cập nhật"}
+          </p>
+          <p className="min-h-4 line-clamp-1 text-xs text-muted-foreground/90">
+            {countryText}
           </p>
         </div>
 

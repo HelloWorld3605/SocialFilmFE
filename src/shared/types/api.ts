@@ -10,7 +10,9 @@ export interface MovieSummary {
   year?: number | null;
   type?: string | null;
   categories?: string[];
+  categorySlugs?: string[];
   countries?: string[];
+  countrySlugs?: string[];
   tmdbId?: number | null;
   sourceId?: string | null;
   modifiedTime?: string | null;
