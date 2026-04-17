@@ -33,6 +33,7 @@ const MovieCard = ({
   const image = movie.posterUrl || movie.thumbUrl || "";
   const countryText =
     movie.countries?.slice(0, 2).join(" • ") || "Đang cập nhật";
+  const englishTitle = movie.originName?.trim();
   const prefetchMovieDetails = () => {
     if (queryClient.getQueryData(["movie", movie.slug])) {
       return;
@@ -183,6 +184,9 @@ const MovieCard = ({
           <h3 className="min-h-[2.5rem] line-clamp-2 text-sm font-bold leading-5 text-foreground">
             {movie.name}
           </h3>
+          <p className="min-h-4 line-clamp-1 text-[11px] italic text-muted-foreground/80">
+            {englishTitle || " "}
+          </p>
           <p className="min-h-4 line-clamp-1 text-xs text-muted-foreground">
             {movie.episodeCurrent || "Đang cập nhật"}
           </p>
