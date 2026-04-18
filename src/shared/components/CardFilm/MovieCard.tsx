@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, type MouseEvent } from "react";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
@@ -34,6 +34,7 @@ const MovieCard = ({
   const countryText =
     movie.countries?.slice(0, 2).join(" • ") || "Đang cập nhật";
   const englishTitle = movie.originName?.trim();
+  const movieHref = `/movie/${movie.slug}`;
   const prefetchMovieDetails = () => {
     if (queryClient.getQueryData(["movie", movie.slug])) {
       return;
@@ -113,7 +114,6 @@ const MovieCard = ({
     >
       <div
         className="relative aspect-[2/3] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] p-2 shadow-[0_18px_55px_rgba(0,0,0,0.22)] transition-all duration-300 group-hover:-translate-y-1 group-hover:border-primary/30 group-hover:shadow-[0_24px_70px_rgba(0,0,0,0.3)]"
-        onClick={() => navigate(`/movie/${movie.slug}`)}
       >
         <div className="relative h-full w-full overflow-hidden rounded-[22px] bg-secondary">
           {!imageError && image ? (
@@ -134,7 +134,13 @@ const MovieCard = ({
             </div>
           )}
 
-          <div className="absolute right-3 top-3">
+          <Link
+            to={movieHref}
+            aria-label={`Mở phim ${movie.name}`}
+            className="absolute inset-0 z-10"
+          />
+
+          <div className="absolute right-3 top-3 z-20">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -177,10 +183,7 @@ const MovieCard = ({
       </div>
 
       <div className="space-y-3 px-1.5">
-        <div
-          className="space-y-1"
-          onClick={() => navigate(`/movie/${movie.slug}`)}
-        >
+        <Link to={movieHref} className="block space-y-1">
           <h3 className="min-h-[2.5rem] line-clamp-2 text-sm font-bold leading-5 text-foreground">
             {movie.name}
           </h3>
@@ -193,7 +196,7 @@ const MovieCard = ({
           <p className="min-h-4 line-clamp-1 text-xs text-muted-foreground/90">
             {countryText}
           </p>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2">
           {wishlistMutation.isPending ? (

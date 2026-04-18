@@ -19,7 +19,61 @@ import type { MovieSummary } from "@/shared/types/api";
 const INITIAL_SIMILAR_MOVIES = 6;
 const SIMILAR_MOVIES_STEP = 6;
 const SIMILAR_MOVIE_FETCH_LIMIT = 24;
+const SIMILAR_CANDIDATE_POOL_SIZE = 30;
 const MAX_SIMILAR_MOVIES = 18;
+const SIMILAR_DETAIL_SAMPLE_BASE =
+  INITIAL_SIMILAR_MOVIES + SIMILAR_MOVIES_STEP;
+const CONTENT_STOP_WORDS = new Set([
+  "va",
+  "voi",
+  "cua",
+  "cho",
+  "khi",
+  "nhung",
+  "mot",
+  "nhieu",
+  "nguoi",
+  "trong",
+  "tren",
+  "duoc",
+  "khong",
+  "phan",
+  "the",
+  "la",
+  "theo",
+  "day",
+  "nay",
+  "kia",
+  "roi",
+  "sau",
+  "anh",
+  "co",
+  "cung",
+  "about",
+  "after",
+  "before",
+  "from",
+  "into",
+  "over",
+  "with",
+  "without",
+  "their",
+  "there",
+  "where",
+  "when",
+  "while",
+  "about",
+  "this",
+  "that",
+  "them",
+  "they",
+  "are",
+  "was",
+  "were",
+  "have",
+  "has",
+  "into",
+]);
 
 const stripHtml = (value: unknown) =>
   typeof value === "string" ? value.replace(/<[^>]+>/g, "").trim() : "";
@@ -75,6 +129,83 @@ const buildRelatedParams = (
   });
 
   return params;
+};
+
+const normalizeComparableText = (value: string) =>
+  value.toLowerCase().replace(/\s+/g, " ").trim();
+
+const extractComparablePeople = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return Array.from(
+      new Set(
+        value
+          .flatMap((item) =>
+            typeof item === "string"
+              ? item.split(/[,;/|&]+/)
+              : [],
+          )
+          .map((item) => normalizeComparableText(item))
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  if (typeof value === "string") {
+    return Array.from(
+      new Set(
+        value
+          .split(/[,;/|&]+/)
+          .map((item) => normalizeComparableText(item))
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  return [] as string[];
+};
+
+const buildContentKeywordSet = (value: unknown) => {
+  if (typeof value !== "string") {
+    return new Set<string>();
+  }
+
+  const normalizedText = stripHtml(value)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ");
+  const keywordSet = new Set<string>();
+
+  normalizedText.split(/\s+/).forEach((token) => {
+    const normalizedToken = normalizeComparableText(token);
+    if (
+      normalizedToken.length < 3 ||
+      CONTENT_STOP_WORDS.has(normalizedToken) ||
+      keywordSet.size >= 48
+    ) {
+      return;
+    }
+
+    keywordSet.add(normalizedToken);
+  });
+
+  return keywordSet;
+};
+
+const countSharedValues = (left: Set<string>, right: Set<string>) => {
+  if (!left.size || !right.size) {
+    return 0;
+  }
+
+  const [smaller, larger] =
+    left.size <= right.size ? [left, right] : [right, left];
+  let matches = 0;
+
+  smaller.forEach((value) => {
+    if (larger.has(value)) {
+      matches += 1;
+    }
+  });
+
+  return matches;
 };
 
 const MovieDetail = () => {
@@ -161,6 +292,22 @@ const MovieDetail = () => {
     }
     return [];
   }, [rawMovie]);
+  const actorSignalSet = useMemo(
+    () => new Set(extractComparablePeople(rawMovie?.actor)),
+    [rawMovie],
+  );
+  const directorSignalSet = useMemo(
+    () => new Set(extractComparablePeople(rawMovie?.director)),
+    [rawMovie],
+  );
+  const contentKeywordSet = useMemo(
+    () => buildContentKeywordSet(rawMovie?.content),
+    [rawMovie],
+  );
+  const hasExtendedSimilarSignals =
+    actorSignalSet.size > 0 ||
+    directorSignalSet.size > 0 ||
+    contentKeywordSet.size > 0;
 
   const visibleActors = useMemo(
     () => (showAllActors ? actors : actors.slice(0, 6)),
@@ -204,12 +351,6 @@ const MovieDetail = () => {
   const primaryCountrySlug =
     countryEntries.find((entry) => entry.slug)?.slug ?? null;
 
-  const releaseYear = useMemo(() => {
-    const rawYear = rawMovie?.year ?? movie?.year;
-    const parsedYear = Number(rawYear);
-    return Number.isFinite(parsedYear) && parsedYear > 0 ? parsedYear : null;
-  }, [movie?.year, rawMovie]);
-
   const countries = movie?.countries?.join(", ") || "Đang cập nhật";
   const categories = movie?.categories ?? [];
 
@@ -233,26 +374,7 @@ const MovieDetail = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const relatedYearQuery = useQuery({
-    queryKey: [
-      "related-year",
-      releaseYear,
-      relatedCategorySlugs[0],
-      primaryCountrySlug,
-    ],
-    queryFn: () =>
-      api.yearDetail(
-        releaseYear as number,
-        buildRelatedParams({
-          category: relatedCategorySlugs[0] ?? undefined,
-          country: primaryCountrySlug ?? undefined,
-        }),
-      ),
-    enabled: Boolean(releaseYear),
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const similarMovies = useMemo(() => {
+  const coarseSimilarEntries = useMemo(() => {
     if (!movie) return [];
 
     const currentCategories = new Set(
@@ -269,7 +391,6 @@ const MovieDetail = () => {
         score: number;
         sharedCategories: number;
         sharedCountry: boolean;
-        sameYear: boolean;
         sameType: boolean;
         sameLang: boolean;
         matchedSources: Set<string>;
@@ -291,7 +412,6 @@ const MovieDetail = () => {
         score: 0,
         sharedCategories: 0,
         sharedCountry: false,
-        sameYear: false,
         sameType: false,
         sameLang: false,
         matchedSources: new Set<string>(),
@@ -314,8 +434,6 @@ const MovieDetail = () => {
         sharedCategories,
       );
       current.sharedCountry = current.sharedCountry || sharedCountry;
-      current.sameYear =
-        current.sameYear || Boolean(releaseYear && item.year === releaseYear);
       current.sameType =
         current.sameType || Boolean(movie.type && item.type === movie.type);
       current.sameLang =
@@ -324,7 +442,6 @@ const MovieDetail = () => {
         current.sourceScore +
         current.sharedCategories * 4 +
         (current.sharedCountry ? 2.5 : 0) +
-        (current.sameYear ? 2 : 0) +
         (current.sameType ? 1.5 : 0) +
         (current.sameLang ? 0.5 : 0);
 
@@ -346,14 +463,9 @@ const MovieDetail = () => {
       applyCandidate(item, `country:${primaryCountrySlug}`, 3.5),
     );
 
-    (relatedYearQuery.data?.items ?? []).forEach((item) =>
-      applyCandidate(item, `year:${releaseYear}`, 3),
-    );
-
     return Array.from(ranked.values())
       .filter(
-        (entry) =>
-          entry.sharedCategories > 0 || entry.sharedCountry || entry.sameYear,
+        (entry) => entry.sharedCategories > 0 || entry.sharedCountry,
       )
       .sort(
         (left, right) =>
@@ -362,17 +474,122 @@ const MovieDetail = () => {
           Number(right.item.year ?? 0) - Number(left.item.year ?? 0) ||
           left.item.name.localeCompare(right.item.name, "vi"),
       )
-      .map((entry) => entry.item)
-      .slice(0, MAX_SIMILAR_MOVIES);
+      .slice(0, SIMILAR_CANDIDATE_POOL_SIZE);
   }, [
     categories,
     movie,
     primaryCountrySlug,
-    releaseYear,
     relatedCategorySlugs,
     relatedCategoryQueries,
     relatedCountryQuery.data?.items,
-    relatedYearQuery.data?.items,
+  ]);
+
+  const similarDetailSampleSize = Math.min(
+    coarseSimilarEntries.length,
+    Math.max(SIMILAR_DETAIL_SAMPLE_BASE, visibleSimilarCount),
+  );
+  const detailedSimilarCandidates = useMemo(
+    () => coarseSimilarEntries.slice(0, similarDetailSampleSize),
+    [coarseSimilarEntries, similarDetailSampleSize],
+  );
+  const similarDetailQueries = useQueries({
+    queries: detailedSimilarCandidates.map((entry) => ({
+      queryKey: ["movie", entry.item.slug],
+      queryFn: () => api.movie(entry.item.slug),
+      enabled: hasExtendedSimilarSignals && Boolean(entry.item.slug),
+      staleTime: 1000 * 60 * 10,
+    })),
+  });
+
+  const similarMovies = useMemo(() => {
+    if (!coarseSimilarEntries.length) {
+      return [];
+    }
+
+    const detailBySlug = new Map(
+      detailedSimilarCandidates.map((entry, index) => [
+        entry.item.slug,
+        similarDetailQueries[index]?.data,
+      ]),
+    );
+
+    return coarseSimilarEntries
+      .map((entry) => {
+        const detailData = detailBySlug.get(entry.item.slug);
+        const detailMovie = detailData?.movie ?? entry.item;
+        const detailRawMovie = detailData?.raw?.movie as
+          | Record<string, unknown>
+          | undefined;
+        const candidateActorSet = new Set(
+          extractComparablePeople(detailRawMovie?.actor),
+        );
+        const candidateDirectorSet = new Set(
+          extractComparablePeople(detailRawMovie?.director),
+        );
+        const candidateContentSet = buildContentKeywordSet(
+          detailRawMovie?.content,
+        );
+        const sharedActors = countSharedValues(
+          actorSignalSet,
+          candidateActorSet,
+        );
+        const sharedDirectors = countSharedValues(
+          directorSignalSet,
+          candidateDirectorSet,
+        );
+        const sharedContentKeywords = countSharedValues(
+          contentKeywordSet,
+          candidateContentSet,
+        );
+        const contentCoverage =
+          sharedContentKeywords > 0 &&
+          contentKeywordSet.size > 0 &&
+          candidateContentSet.size > 0
+            ? sharedContentKeywords /
+              Math.sqrt(contentKeywordSet.size * candidateContentSet.size)
+            : 0;
+        const actorScore = Math.min(sharedActors, 3) * 3;
+        const directorScore = Math.min(sharedDirectors, 2) * 4;
+        const contentScore =
+          Math.min(sharedContentKeywords, 8) * 0.35 +
+          (contentCoverage >= 0.22 ? 1.25 : contentCoverage >= 0.14 ? 0.6 : 0);
+        const synergyBonus =
+          sharedActors > 0 && sharedDirectors > 0
+            ? 1.5
+            : sharedActors > 0 && sharedContentKeywords > 0
+              ? 0.75
+              : 0;
+
+        return {
+          ...entry,
+          item: detailMovie,
+          sharedActors,
+          sharedDirectors,
+          sharedContentKeywords,
+          enhancedScore:
+            entry.score + actorScore + directorScore + contentScore + synergyBonus,
+        };
+      })
+      .sort(
+        (left, right) =>
+          right.enhancedScore - left.enhancedScore ||
+          right.sharedActors - left.sharedActors ||
+          right.sharedDirectors - left.sharedDirectors ||
+          right.sharedContentKeywords - left.sharedContentKeywords ||
+          right.score - left.score ||
+          right.matchedSources.size - left.matchedSources.size ||
+          Number(right.item.year ?? 0) - Number(left.item.year ?? 0) ||
+          left.item.name.localeCompare(right.item.name, "vi"),
+      )
+      .map((entry) => entry.item)
+      .slice(0, MAX_SIMILAR_MOVIES);
+  }, [
+    actorSignalSet,
+    coarseSimilarEntries,
+    contentKeywordSet,
+    detailedSimilarCandidates,
+    directorSignalSet,
+    similarDetailQueries,
   ]);
 
   const visibleSimilarMovies = useMemo(
@@ -386,8 +603,7 @@ const MovieDetail = () => {
     visibleSimilarCount > INITIAL_SIMILAR_MOVIES;
   const similarMoviesLoading =
     relatedCategoryQueries.some((query) => query.isLoading) ||
-    relatedCountryQuery.isLoading ||
-    relatedYearQuery.isLoading;
+    relatedCountryQuery.isLoading;
 
   const similarMovieSignals = useMemo(() => {
     const signals: string[] = [];
@@ -398,12 +614,24 @@ const MovieDetail = () => {
     if (primaryCountrySlug) {
       signals.push("khớp quốc gia");
     }
-    if (releaseYear) {
-      signals.push(`cùng năm ${releaseYear}`);
+    if (actorSignalSet.size) {
+      signals.push("khớp diễn viên");
+    }
+    if (directorSignalSet.size) {
+      signals.push("khớp đạo diễn");
+    }
+    if (contentKeywordSet.size) {
+      signals.push("tương đồng nội dung");
     }
 
     return signals;
-  }, [primaryCountrySlug, releaseYear, relatedCategorySlugs.length]);
+  }, [
+    actorSignalSet.size,
+    contentKeywordSet.size,
+    directorSignalSet.size,
+    primaryCountrySlug,
+    relatedCategorySlugs.length,
+  ]);
 
   if (movieQuery.isLoading) {
     return (

@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Save,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
@@ -30,7 +31,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { Textarea } from "@/shared/components/ui/textarea";
-import type { AdminUpdateUserRequest } from "@/shared/types/api";
+import type { AdminUpdateUserRequest, AdminUsersResponse } from "@/shared/types/api";
 
 const numberFormatter = new Intl.NumberFormat("vi-VN");
 
@@ -56,7 +57,7 @@ const parseSelectedUserId = (value: string | null) => {
 const panelClass = "rounded-[28px] border border-white/10 bg-black/25 p-5";
 
 const AdminUsersPage = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Math.max(Number(searchParams.get("page") ?? "0") || 0, 0);
@@ -66,6 +67,10 @@ const AdminUsersPage = () => {
   const selectedUserId = parseSelectedUserId(searchParams.get("selected"));
   const [draftQuery, setDraftQuery] = useState(query);
   const [message, setMessage] = useState<string | null>(null);
+  const [deleteFeedback, setDeleteFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [formState, setFormState] = useState<AdminUpdateUserRequest>({
     fullName: "",
     role: "USER",
@@ -135,6 +140,50 @@ const AdminUsersPage = () => {
     onError: (error) => setMessage((error as Error).message),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteAdminUser(token as string, selectedUserId as number),
+    onSuccess: (data) => {
+      const deletedUserId = selectedUserId as number;
+      const remainingUsers = usersQuery.data?.items.filter((item) => item.id !== deletedUserId) ?? [];
+      const shouldStepBackPage = remainingUsers.length === 0 && page > 0;
+
+      queryClient.setQueryData<AdminUsersResponse | undefined>(
+        ["admin-users", token, usersQueryParams.toString()],
+        (current) => {
+          if (!current) return current;
+          const nextItems = current.items.filter((item) => item.id !== deletedUserId);
+          const nextTotalItems = Math.max(current.totalItems - 1, 0);
+          const nextTotalPages =
+            nextTotalItems === 0 ? 0 : Math.ceil(nextTotalItems / Math.max(current.size, 1));
+
+          return {
+            ...current,
+            totalItems: nextTotalItems,
+            totalPages: nextTotalPages,
+            items: nextItems,
+          };
+        },
+      );
+      queryClient.removeQueries({ queryKey: ["admin-user", token, deletedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-overview"] });
+      setDeleteFeedback({ type: "success", text: data.message });
+      setMessage(null);
+      applyParams(
+        {
+          page: shouldStepBackPage ? String(page - 1) : null,
+          selected: remainingUsers[0] ? String(remainingUsers[0].id) : null,
+        },
+        true,
+      );
+    },
+    onError: (error) =>
+      setDeleteFeedback({
+        type: "error",
+        text: (error as Error).message,
+      }),
+  });
+
   const applyParams = (updates: Record<string, string | null>, replace = false) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
@@ -146,6 +195,9 @@ const AdminUsersPage = () => {
 
   const canGoPrev = page > 0;
   const canGoNext = Boolean(usersQuery.data) && page + 1 < (usersQuery.data?.totalPages ?? 0);
+  const canDeleteSelectedUser = Boolean(
+    userDetailQuery.data?.user && user?.id && user.id !== userDetailQuery.data.user.id,
+  );
 
   return (
     <div className="space-y-6">
@@ -207,6 +259,16 @@ const AdminUsersPage = () => {
           </form>
         </CardContent>
       </Card>
+
+      {deleteFeedback ? (
+        <p
+          className={`text-sm ${
+            deleteFeedback.type === "error" ? "text-red-300" : "text-emerald-300"
+          }`}
+        >
+          {deleteFeedback.text}
+        </p>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.02fr)_minmax(360px,0.98fr)]">
         <Card className="rounded-[32px] border-white/10 bg-white/[0.04] text-white">
@@ -353,19 +415,49 @@ const AdminUsersPage = () => {
                         <span>{numberFormatter.format(userDetailQuery.data.user.wishlistCount)} wishlist</span>
                       </div>
                     </div>
-                    {userDetailQuery.data.recentWatchHistory[0]?.movieSlug ? (
+                    <div className="flex flex-col items-end gap-2">
+                      {userDetailQuery.data.recentWatchHistory[0]?.movieSlug ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
+                        >
+                          <Link to={`/movie/${userDetailQuery.data.recentWatchHistory[0].movieSlug}`}>
+                            <ExternalLink className="h-4 w-4" />
+                            Mở phim gần nhất
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button
-                        asChild
-                        variant="outline"
+                        type="button"
+                        variant="destructive"
                         size="sm"
-                        className="border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]"
+                        disabled={!canDeleteSelectedUser || deleteMutation.isPending}
+                        onClick={() => {
+                          if (!selectedUserId || !userDetailQuery.data?.user) return;
+                          const targetUser = userDetailQuery.data.user;
+                          const confirmed = window.confirm(
+                            `Xóa người dùng "${targetUser.fullName}"?\n\nThao tác này sẽ xóa ${numberFormatter.format(
+                              targetUser.watchHistoryCount,
+                            )} lịch sử xem và ${numberFormatter.format(
+                              targetUser.wishlistCount,
+                            )} mục wishlist của tài khoản này.`,
+                          );
+                          if (!confirmed) return;
+                          setDeleteFeedback(null);
+                          deleteMutation.mutate();
+                        }}
                       >
-                        <Link to={`/movie/${userDetailQuery.data.recentWatchHistory[0].movieSlug}`}>
-                          <ExternalLink className="h-4 w-4" />
-                          Mở phim gần nhất
-                        </Link>
+                        <Trash2 className="h-4 w-4" />
+                        {deleteMutation.isPending ? "Đang xóa..." : "Xóa user"}
                       </Button>
-                    ) : null}
+                      {!canDeleteSelectedUser ? (
+                        <p className="text-right text-[11px] text-white/40">
+                          Không thể xóa chính tài khoản admin đang đăng nhập.
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 

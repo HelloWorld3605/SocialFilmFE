@@ -144,6 +144,11 @@ export const api = {
       body: payload,
       token,
     }),
+  deleteAdminUser: (token: string, userId: number | string) =>
+    request<AdminActionResponse>(`/admin/users/${userId}`, {
+      method: "DELETE",
+      token,
+    }),
   search: (
     searchParams: URLSearchParams,
     options: Pick<RequestOptions, "signal"> = {},
