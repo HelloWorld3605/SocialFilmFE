@@ -23,7 +23,7 @@ const ValidateRegistrationTokenPage = () => {
           return;
         }
         navigate(
-          `/complete-registration?token=${encodeURIComponent(token)}&email=${encodeURIComponent(response.email)}`,
+          `/complete-registration?token=${encodeURIComponent(token)}&email=${encodeURIComponent(response.email)}&verified=true`,
           { replace: true },
         );
       } catch (validationError) {

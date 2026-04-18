@@ -12,6 +12,7 @@ import type {
   LibraryMovie,
   MessageResponse,
   MovieDetailResponse,
+  PasswordResetTokenValidationResponse,
   PagedMovieResponse,
   RegistrationTokenValidationResponse,
   UserProfile,
@@ -224,6 +225,20 @@ export const api = {
     password: string;
   }) =>
     request<AuthResponse>("/auth/complete-registration", {
+      method: "POST",
+      body: payload,
+    }),
+  forgotPassword: (payload: { email: string }) =>
+    request<MessageResponse>("/auth/forgot-password", {
+      method: "POST",
+      body: payload,
+    }),
+  validatePasswordResetToken: (token: string) =>
+    request<PasswordResetTokenValidationResponse>(
+      `/auth/reset-password/validate/${encodeURIComponent(token)}`,
+    ),
+  resetPassword: (payload: { resetToken: string; password: string }) =>
+    request<MessageResponse>("/auth/reset-password", {
       method: "POST",
       body: payload,
     }),

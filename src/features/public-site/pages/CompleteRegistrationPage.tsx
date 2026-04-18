@@ -12,6 +12,10 @@ const CompleteRegistrationPage = () => {
   const [loading, setLoading] = useState(false);
 
   const email = useMemo(() => searchParams.get("email"), [searchParams]);
+  const emailVerified = useMemo(
+    () => searchParams.get("verified") === "true",
+    [searchParams],
+  );
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -89,11 +93,19 @@ const CompleteRegistrationPage = () => {
         <div className="grid w-full gap-8 rounded-[36px] border border-white/10 bg-white/5 p-8 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.3em] text-primary">Đăng ký</p>
-            <h1 className="text-4xl font-black text-white">Hoàn tất đăng ký tài khoản SocialFilm.</h1>
+            <h1 className="text-4xl font-black text-white">
+              {emailVerified ? "Email đã được xác thực." : "Hoàn tất đăng ký tài khoản SocialFilm."}
+            </h1>
             <p className="text-muted-foreground">
-              {email ? `Email đang xác thực: ${email}. ` : ""}
+              {emailVerified && email ? `Email ${email} đã được xác thực thành công. ` : ""}
+              {!emailVerified && email ? `Email đang xác thực: ${email}. ` : ""}
               Thiết lập tên hiển thị và mật khẩu để kích hoạt tài khoản.
             </p>
+            {emailVerified ? (
+              <div className="rounded-[24px] border border-emerald-500/25 bg-emerald-500/10 px-5 py-4 text-sm leading-6 text-emerald-200">
+                Liên kết trong email hợp lệ. Bạn chỉ còn một bước cuối là đặt tên hiển thị và mật khẩu để hoàn tất đăng ký.
+              </div>
+            ) : null}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5 rounded-[28px] bg-black/30 p-6">

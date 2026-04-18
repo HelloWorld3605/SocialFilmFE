@@ -194,6 +194,12 @@ export interface RegistrationTokenValidationResponse {
   expiresAt: string;
 }
 
+export interface PasswordResetTokenValidationResponse {
+  valid: boolean;
+  email: string;
+  expiresAt: string;
+}
+
 export interface UploadResponse {
   url: string;
 }

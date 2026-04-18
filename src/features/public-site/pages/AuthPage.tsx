@@ -11,6 +11,8 @@ const getTrimmedText = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const GMAIL_INBOX_URL = "https://mail.google.com/mail/u/0/#inbox";
+
 const AuthPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,7 +21,9 @@ const AuthPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-  const [debugVerificationUrl, setDebugVerificationUrl] = useState<string | null>(null);
+  const [debugVerificationUrl, setDebugVerificationUrl] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -58,13 +62,16 @@ const AuthPage = () => {
       : null;
   const activeImageTitle = getTrimmedText(activeImage?.title);
   const activeImageDescription = getTrimmedText(activeImage?.description);
+  const canOpenGmail =
+    registeredEmail?.trim().toLowerCase().endsWith("@gmail.com") ?? false;
 
   const heroCopy = useMemo(
     () =>
       mode === "register"
         ? {
             eyebrow: "Tạo tài khoản mới",
-            title: "Theo dõi phim đang hot, lưu wishlist và bắt đầu hồ sơ xem riêng của bạn.",
+            title:
+              "Theo dõi phim đang hot, lưu wishlist và bắt đầu hồ sơ xem riêng của bạn.",
             description:
               "Chỉ cần nhập email, xác thực liên kết trong thư và hoàn tất hồ sơ để mở trải nghiệm cá nhân hóa trên FilmBE.",
             formTitle: "Bắt đầu đăng ký",
@@ -74,7 +81,8 @@ const AuthPage = () => {
           }
         : {
             eyebrow: "Quay lại tài khoản",
-            title: "Đăng nhập để tiếp tục dở dang và giữ toàn bộ lịch sử xem của bạn luôn đồng bộ.",
+            title:
+              "Đăng nhập để tiếp tục dở dang và giữ toàn bộ lịch sử xem của bạn luôn đồng bộ.",
             description:
               "Tài khoản giúp bạn quay lại đúng phim, đúng tập và đúng nhịp xem trên mọi phiên sử dụng.",
             formTitle: "Đăng nhập",
@@ -101,7 +109,9 @@ const AuthPage = () => {
 
   const showPreviousImage = () => {
     if (!canCycleImages) return;
-    setActiveImageIndex((current) => (current - 1 + authImages.length) % authImages.length);
+    setActiveImageIndex(
+      (current) => (current - 1 + authImages.length) % authImages.length,
+    );
   };
 
   const showNextImage = () => {
@@ -238,11 +248,15 @@ const AuthPage = () => {
             <div className="space-y-6">
               <div className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.28em] text-primary/80">
-                  Tài khoản FilmBE
+                  Tài khoản SocialFilm
                 </p>
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-black text-white">{heroCopy.formTitle}</h2>
-                  <p className="text-sm leading-6 text-white/60">{heroCopy.formDescription}</p>
+                  <h2 className="text-3xl font-black text-white">
+                    {heroCopy.formTitle}
+                  </h2>
+                  <p className="text-sm leading-6 text-white/60">
+                    {heroCopy.formDescription}
+                  </p>
                 </div>
               </div>
 
@@ -274,12 +288,15 @@ const AuthPage = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {mode === "register" ? (
                   <div className="rounded-[2px] border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-white/65">
-                    Đăng ký theo cơ chế xác thực email. Nhập email, mở liên kết trong thư rồi hoàn tất hồ sơ và mật khẩu.
+                    Đăng ký theo cơ chế xác thực email. Nhập email, mở liên kết
+                    trong thư rồi hoàn tất hồ sơ và mật khẩu.
                   </div>
                 ) : null}
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/72">Email</label>
+                  <label className="text-sm font-medium text-white/72">
+                    Email
+                  </label>
                   <div className="flex items-center gap-3 rounded-[2px] border border-white/10 bg-white/[0.04] px-4 py-3">
                     <Mail className="h-4 w-4 text-white/45" />
                     <input
@@ -294,7 +311,9 @@ const AuthPage = () => {
 
                 {mode === "login" ? (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-white/72">Mật khẩu</label>
+                    <label className="text-sm font-medium text-white/72">
+                      Mật khẩu
+                    </label>
                     <div className="flex items-center gap-3 rounded-[2px] border border-white/10 bg-white/[0.04] px-4 py-3">
                       <LockKeyhole className="h-4 w-4 text-white/45" />
                       <input
@@ -305,6 +324,14 @@ const AuthPage = () => {
                         required
                       />
                     </div>
+                    <div className="flex justify-end">
+                      <Link
+                        to="/forgot-password"
+                        className="text-sm font-medium text-primary transition hover:text-primary/80"
+                      >
+                        Quên mật khẩu?
+                      </Link>
+                    </div>
                   </div>
                 ) : null}
 
@@ -313,13 +340,29 @@ const AuthPage = () => {
                     <p>{successMessage}</p>
                     {registeredEmail ? (
                       <p className="mt-2">
-                        Hãy kiểm tra hộp thư của <span className="font-semibold">{registeredEmail}</span>.
+                        Hãy kiểm tra hộp thư của{" "}
+                        <span className="font-semibold">{registeredEmail}</span>
+                        .
                       </p>
+                    ) : null}
+                    {canOpenGmail ? (
+                      <a
+                        href={GMAIL_INBOX_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 rounded-[2px] border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 font-semibold text-white transition hover:border-emerald-300/60 hover:bg-emerald-500/20"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Mở Gmail
+                      </a>
                     ) : null}
                     {debugVerificationUrl ? (
                       <p className="mt-3">
                         <Link
-                          to={debugVerificationUrl.replace(window.location.origin, "")}
+                          to={debugVerificationUrl.replace(
+                            window.location.origin,
+                            "",
+                          )}
                           className="font-semibold text-white underline"
                         >
                           Mở liên kết xác thực nội bộ
@@ -340,7 +383,9 @@ const AuthPage = () => {
                   disabled={loading}
                   className="flex w-full items-center justify-center gap-2 rounded-[2px] bg-primary px-5 py-3.5 font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <span>{loading ? "Đang xử lý..." : heroCopy.submitLabel}</span>
+                  <span>
+                    {loading ? "Đang xử lý..." : heroCopy.submitLabel}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </form>

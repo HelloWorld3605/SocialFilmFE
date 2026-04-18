@@ -9,10 +9,16 @@ const WatchPage = React.lazy(() => import("@/features/public-site/pages/WatchPag
 const CatalogPage = React.lazy(() => import("@/features/public-site/pages/CatalogPage"));
 const WishlistPage = React.lazy(() => import("@/features/public-site/pages/WishlistPage"));
 const AuthPage = React.lazy(() => import("@/features/public-site/pages/AuthPage"));
+const ForgotPasswordPage = React.lazy(
+  () => import("@/features/public-site/pages/ForgotPasswordPage"),
+);
 const CompleteRegistrationPage = React.lazy(
   () => import("@/features/public-site/pages/CompleteRegistrationPage"),
 );
 const ProfilePage = React.lazy(() => import("@/features/public-site/pages/ProfilePage"));
+const ResetPasswordPage = React.lazy(
+  () => import("@/features/public-site/pages/ResetPasswordPage"),
+);
 const SettingsPage = React.lazy(() => import("@/features/public-site/pages/SettingsPage"));
 const ValidateRegistrationTokenPage = React.lazy(
   () => import("@/features/public-site/pages/ValidateRegistrationTokenPage"),
@@ -52,11 +58,13 @@ const publicRouters = [
       { path: "catalog", element: withSuspense(<CatalogPage />) },
       { path: "wishlist", element: withSuspense(<WishlistPage />) },
       { path: "auth", element: withSuspense(<AuthPage />) },
+      { path: "forgot-password", element: withSuspense(<ForgotPasswordPage />) },
       {
         path: "complete-registration",
         element: withSuspense(<CompleteRegistrationPage />),
       },
       { path: "profile", element: withSuspense(<ProfilePage />) },
+      { path: "reset-password/:token", element: withSuspense(<ResetPasswordPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
       {
         path: "validate-token/:token",
