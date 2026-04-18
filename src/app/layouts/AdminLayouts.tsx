@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import {
   ChartColumnBig,
   Clapperboard,
+  Images,
   LogOut,
   MailCheck,
   ShieldCheck,
@@ -23,6 +24,12 @@ const navItems = [
     label: "Người dùng",
     icon: Users,
     description: "Quản lý role và hồ sơ thành viên",
+  },
+  {
+    to: "/admin/auth-images",
+    label: "Ảnh auth",
+    icon: Images,
+    description: "Cập nhật ảnh cho login và register",
   },
   {
     to: "/admin/pending-registrations",

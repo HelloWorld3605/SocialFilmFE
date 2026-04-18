@@ -153,6 +153,20 @@ export interface AdminActionResponse {
   message: string;
 }
 
+export interface AuthPageImage {
+  id: number;
+  imageUrl: string;
+  title?: string | null;
+  description?: string | null;
+  focalPointX: number;
+  focalPointY: number;
+  createdAt: string;
+}
+
+export interface AuthPageImagesResponse {
+  items: AuthPageImage[];
+}
+
 export interface UserProfile {
   id: number;
   fullName: string;

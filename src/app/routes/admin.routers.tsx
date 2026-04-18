@@ -10,6 +10,9 @@ const AdminDashboardPage = React.lazy(
 const AdminUsersPage = React.lazy(
   () => import("@/features/admin/pages/AdminUsersPage"),
 );
+const AdminAuthImagesPage = React.lazy(
+  () => import("@/features/admin/pages/AdminAuthImagesPage"),
+);
 const AdminPendingRegistrationsPage = React.lazy(
   () => import("@/features/admin/pages/AdminPendingRegistrationsPage"),
 );
@@ -44,6 +47,7 @@ const adminRouters = [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: withSuspense(<AdminDashboardPage />) },
       { path: "users", element: withSuspense(<AdminUsersPage />) },
+      { path: "auth-images", element: withSuspense(<AdminAuthImagesPage />) },
       {
         path: "pending-registrations",
         element: withSuspense(<AdminPendingRegistrationsPage />),

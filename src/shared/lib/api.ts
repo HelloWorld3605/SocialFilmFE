@@ -1,6 +1,8 @@
 import type {
   AuthResponse,
   AdminActionResponse,
+  AuthPageImage,
+  AuthPageImagesResponse,
   AdminPendingRegistrationsResponse,
   AdminOverviewResponse,
   AdminUpdateUserRequest,
@@ -149,12 +151,51 @@ export const api = {
       method: "DELETE",
       token,
     }),
+  adminAuthPageImages: (token: string) =>
+    request<AuthPageImagesResponse>("/admin/auth-images", { token }),
+  createAdminAuthPageImage: (
+    token: string,
+    payload: {
+      imageUrl: string;
+      title?: string;
+      description?: string;
+      focalPointX?: number;
+      focalPointY?: number;
+    },
+  ) =>
+    request<AuthPageImage>("/admin/auth-images", {
+      method: "POST",
+      body: payload,
+      token,
+    }),
+  updateAdminAuthPageImage: (
+    token: string,
+    imageId: number | string,
+    payload: {
+      imageUrl: string;
+      title?: string;
+      description?: string;
+      focalPointX?: number;
+      focalPointY?: number;
+    },
+  ) =>
+    request<AuthPageImage>(`/admin/auth-images/${imageId}`, {
+      method: "PUT",
+      body: payload,
+      token,
+    }),
+  deleteAdminAuthPageImage: (token: string, imageId: number | string) =>
+    request<AdminActionResponse>(`/admin/auth-images/${imageId}`, {
+      method: "DELETE",
+      token,
+    }),
   search: (
     searchParams: URLSearchParams,
     options: Pick<RequestOptions, "signal"> = {},
   ) => request<PagedMovieResponse>(`/catalog/search?${searchParams.toString()}`, options),
   categories: () => request<any>("/catalog/categories"),
   countries: () => request<any>("/catalog/countries"),
+  authPageImages: () => request<AuthPageImagesResponse>("/catalog/auth-images"),
   categoryDetail: (slug: string, searchParams: URLSearchParams) =>
     request<PagedMovieResponse>(
       `/catalog/category/${encodeURIComponent(slug)}?${searchParams.toString()}`,
