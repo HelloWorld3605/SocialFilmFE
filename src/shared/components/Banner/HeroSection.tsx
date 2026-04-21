@@ -154,8 +154,14 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                 <p className="text-sm font-semibold uppercase tracking-[0.34em] text-primary/90 text-shadow-hero">
                   {activeMovie.originName || "Mới cập nhật"}
                 </p>
-                <h2 className="max-w-3xl text-3xl font-black leading-[0.94] tracking-tight text-foreground text-shadow-hero md:text-4xl lg:text-5xl">
-                  {activeMovie.name}
+                <h2 className="max-w-3xl">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/movie/${activeMovie.slug}`)}
+                    className="cursor-pointer text-left text-3xl font-black leading-[0.94] tracking-tight text-foreground text-shadow-hero transition-colors duration-300 ease-out hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 md:text-4xl lg:text-5xl"
+                  >
+                    {activeMovie.name}
+                  </button>
                 </h2>
               </div>
 
@@ -229,7 +235,7 @@ const HeroSection = ({ movies }: HeroSectionProps) => {
                           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary/85">
                             {movie.lang || "Vietsub"}
                           </p>
-                          <h3 className="mt-1.5 line-clamp-2 text-xs font-bold leading-4 text-white md:text-sm md:leading-5">
+                          <h3 className="mt-1.5 line-clamp-2 text-xs font-bold leading-4 text-white transition-colors duration-300 ease-out group-hover:text-primary md:text-sm md:leading-5">
                             {movie.name}
                           </h3>
                           <p className="mt-1 line-clamp-1 text-[11px] text-white/55">

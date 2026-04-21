@@ -160,6 +160,7 @@ export const api = {
       imageUrl: string;
       title?: string;
       description?: string;
+      displayOrder?: number;
       focalPointX?: number;
       focalPointY?: number;
     },
@@ -176,6 +177,7 @@ export const api = {
       imageUrl: string;
       title?: string;
       description?: string;
+      displayOrder?: number;
       focalPointX?: number;
       focalPointY?: number;
     },

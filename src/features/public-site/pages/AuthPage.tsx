@@ -4,6 +4,10 @@ import { ArrowLeft, ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
+import {
+  AUTH_IMAGE_PREVIEW_HEIGHT,
+  AUTH_IMAGE_PREVIEW_WIDTH,
+} from "@/shared/lib/authImageLayout";
 import PageNavigation from "@/shared/components/PageNavigation";
 
 const getTrimmedText = (value?: string | null) => {
@@ -33,7 +37,22 @@ const AuthPage = () => {
     retry: false,
   });
 
-  const authImages = authImagesQuery.data?.items ?? [];
+  const authImages = useMemo(() => {
+    const items = authImagesQuery.data?.items ?? [];
+    return [...items].sort((first, second) => {
+      if (first.displayOrder !== second.displayOrder) {
+        return first.displayOrder - second.displayOrder;
+      }
+
+      const createdAtDifference =
+        new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime();
+      if (createdAtDifference !== 0) {
+        return createdAtDifference;
+      }
+
+      return second.id - first.id;
+    });
+  }, [authImagesQuery.data?.items]);
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -160,8 +179,13 @@ const AuthPage = () => {
           ]}
         />
 
-        <div className="grid w-full gap-8 rounded-[2px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr] lg:p-8">
-          <section className="relative min-h-[540px] overflow-hidden rounded-[2px] border border-white/10 bg-[radial-gradient(circle_at_top,#1b2032_0%,#0a1020_42%,#040509_100%)]">
+        <div className="grid w-full gap-8 rounded-[2px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:p-8">
+          <section
+            className="relative min-h-[540px] overflow-hidden rounded-[2px] border border-white/10 bg-[radial-gradient(circle_at_top,#1b2032_0%,#0a1020_42%,#040509_100%)] lg:min-h-0"
+            style={{
+              aspectRatio: `${AUTH_IMAGE_PREVIEW_WIDTH} / ${AUTH_IMAGE_PREVIEW_HEIGHT}`,
+            }}
+          >
             {activeImage ? (
               <img
                 key={`${activeImage.id}-${activeImage.imageUrl}`}
@@ -288,8 +312,13 @@ const AuthPage = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {mode === "register" ? (
                   <div className="rounded-[2px] border border-white/10 bg-white/[0.04] p-4 text-sm leading-6 text-white/65">
-                    Đăng ký theo cơ chế xác thực email. Nhập email, mở liên kết
-                    trong thư rồi hoàn tất hồ sơ và mật khẩu.
+                    <p>
+                      Đăng ký theo cơ chế xác thực email. Nhập email, mở liên kết
+                      trong thư rồi hoàn tất hồ sơ và mật khẩu.
+                    </p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300/90">
+                      Mất chưa tới 30 giây để đăng ký.
+                    </p>
                   </div>
                 ) : null}
 

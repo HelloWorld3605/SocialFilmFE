@@ -27,16 +27,22 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  getCropFrameOffsetPercentage,
+  getObjectPositionPercentage,
+} from "@/features/admin/lib/authImageCrop";
+import {
+  AUTH_IMAGE_PREVIEW_ASPECT_RATIO,
+  AUTH_IMAGE_PREVIEW_HEIGHT,
+  AUTH_IMAGE_PREVIEW_WIDTH,
+} from "@/shared/lib/authImageLayout";
 
 const panelClass = "rounded-[28px] border border-white/10 bg-black/25 p-5";
-// Matches the desktop auth hero panel more closely than the old 4:5 preview.
-const AUTH_PREVIEW_WIDTH = 688;
-const AUTH_PREVIEW_HEIGHT = 540;
-const AUTH_PREVIEW_ASPECT_RATIO = AUTH_PREVIEW_WIDTH / AUTH_PREVIEW_HEIGHT;
 const authPreviewFrameClass =
   "relative overflow-hidden rounded-[2px] border border-white/10 bg-[radial-gradient(circle_at_top,#1b2032_0%,#0a1020_42%,#040509_100%)]";
 const authPreviewOverlayClass =
   "pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,12,0.16)_0%,rgba(4,6,12,0.62)_56%,rgba(4,6,12,0.95)_100%)]";
+const MAX_DISPLAY_ORDER = 9999;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -59,6 +65,22 @@ const getTrimmedText = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const parseDisplayOrderInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error(`Thứ tự xuất hiện phải là số nguyên từ 1 đến ${MAX_DISPLAY_ORDER}.`);
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_DISPLAY_ORDER) {
+    throw new Error(`Thứ tự xuất hiện phải là số nguyên từ 1 đến ${MAX_DISPLAY_ORDER}.`);
+  }
+
+  return parsed;
+};
+
 const AuthImagePreview = ({
   imageUrl,
   title,
@@ -78,7 +100,9 @@ const AuthImagePreview = ({
   return (
     <div
       className={authPreviewFrameClass}
-      style={{ aspectRatio: `${AUTH_PREVIEW_WIDTH} / ${AUTH_PREVIEW_HEIGHT}` }}
+      style={{
+        aspectRatio: `${AUTH_IMAGE_PREVIEW_WIDTH} / ${AUTH_IMAGE_PREVIEW_HEIGHT}`,
+      }}
     >
       {imageUrl ? (
         <img
@@ -108,7 +132,9 @@ const AuthImagePreview = ({
 const AuthImageEmptyPreview = () => (
   <div
     className={authPreviewFrameClass}
-    style={{ aspectRatio: `${AUTH_PREVIEW_WIDTH} / ${AUTH_PREVIEW_HEIGHT}` }}
+    style={{
+      aspectRatio: `${AUTH_IMAGE_PREVIEW_WIDTH} / ${AUTH_IMAGE_PREVIEW_HEIGHT}`,
+    }}
   >
     <div className={authPreviewOverlayClass} />
     <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -176,17 +202,17 @@ const AuthImageCropDialog = ({
 
     const imageAspectRatio = naturalImageSize.width / naturalImageSize.height;
 
-    if (imageAspectRatio > AUTH_PREVIEW_ASPECT_RATIO) {
+    if (imageAspectRatio > AUTH_IMAGE_PREVIEW_ASPECT_RATIO) {
       return {
-        width: (AUTH_PREVIEW_ASPECT_RATIO / imageAspectRatio) * 100,
+        width: (AUTH_IMAGE_PREVIEW_ASPECT_RATIO / imageAspectRatio) * 100,
         height: 100,
       };
     }
 
-    if (imageAspectRatio < AUTH_PREVIEW_ASPECT_RATIO) {
+    if (imageAspectRatio < AUTH_IMAGE_PREVIEW_ASPECT_RATIO) {
       return {
         width: 100,
-        height: (imageAspectRatio / AUTH_PREVIEW_ASPECT_RATIO) * 100,
+        height: (imageAspectRatio / AUTH_IMAGE_PREVIEW_ASPECT_RATIO) * 100,
       };
     }
 
@@ -198,8 +224,8 @@ const AuthImageCropDialog = ({
     const height = cropFrameSize?.height ?? 100;
 
     return {
-      left: clamp(focalPointX - width / 2, 0, 100 - width),
-      top: clamp(focalPointY - height / 2, 0, 100 - height),
+      left: getCropFrameOffsetPercentage(focalPointX, width),
+      top: getCropFrameOffsetPercentage(focalPointY, height),
       width,
       height,
     };
@@ -236,9 +262,16 @@ const AuthImageCropDialog = ({
     const frameHeight = (cropFrameSize.height / 100) * rect.height;
     const nextLeft = clamp(clientX - rect.left - dragState.offsetX, 0, rect.width - frameWidth);
     const nextTop = clamp(clientY - rect.top - dragState.offsetY, 0, rect.height - frameHeight);
-    const nextCenterX = rect.width === 0 ? 50 : (nextLeft / rect.width) * 100 + cropFrameSize.width / 2;
-    const nextCenterY =
-      rect.height === 0 ? 50 : (nextTop / rect.height) * 100 + cropFrameSize.height / 2;
+    const nextLeftPercentage = rect.width === 0 ? 0 : (nextLeft / rect.width) * 100;
+    const nextTopPercentage = rect.height === 0 ? 0 : (nextTop / rect.height) * 100;
+    const nextCenterX = getObjectPositionPercentage(
+      nextLeftPercentage,
+      cropFrameSize.width,
+    );
+    const nextCenterY = getObjectPositionPercentage(
+      nextTopPercentage,
+      cropFrameSize.height,
+    );
 
     onFocalPointChange(Math.round(nextCenterX), Math.round(nextCenterY));
   };
@@ -352,7 +385,7 @@ const AuthImageCropDialog = ({
               </div>
 
               <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/45">Tâm ảnh lưu lại</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/45">Vị trí canh ảnh lưu lại</p>
                 <div className="mt-3 space-y-2 text-sm text-white/80">
                   <p>Ngang: {focalPointX}%</p>
                   <p>Dọc: {focalPointY}%</p>
@@ -413,18 +446,23 @@ const AuthImageCard = ({
       />
     </div>
     <div className="space-y-3 p-4">
-      <div className="space-y-1">
-        {getTrimmedText(image.title) ? (
-          <p className="line-clamp-1 text-sm font-semibold text-white">{getTrimmedText(image.title)}</p>
-        ) : null}
-        {getTrimmedText(image.description) ? (
-          <p className="line-clamp-2 min-h-10 text-xs leading-5 text-white/55">
-            {getTrimmedText(image.description)}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          {getTrimmedText(image.title) ? (
+            <p className="line-clamp-1 text-sm font-semibold text-white">{getTrimmedText(image.title)}</p>
+          ) : null}
+          {getTrimmedText(image.description) ? (
+            <p className="line-clamp-2 min-h-10 text-xs leading-5 text-white/55">
+              {getTrimmedText(image.description)}
+            </p>
+          ) : null}
+          <p className="text-[11px] text-white/40">
+            Vị trí ảnh: ngang {image.focalPointX}% • dọc {image.focalPointY}%
           </p>
-        ) : null}
-        <p className="text-[11px] text-white/40">
-          Vị trí ảnh: ngang {image.focalPointX}% • dọc {image.focalPointY}%
-        </p>
+        </div>
+        <div className="shrink-0 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/78">
+          #{image.displayOrder}
+        </div>
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-[11px] text-white/40">{formatDateTime(image.createdAt)}</p>
@@ -463,6 +501,7 @@ const AdminAuthImagesPage = () => {
   const [directImageUrl, setDirectImageUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [displayOrderInput, setDisplayOrderInput] = useState("");
   const [focalPointX, setFocalPointX] = useState(50);
   const [focalPointY, setFocalPointY] = useState(50);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
@@ -473,6 +512,7 @@ const AdminAuthImagesPage = () => {
   const [editDirectImageUrl, setEditDirectImageUrl] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editDisplayOrderInput, setEditDisplayOrderInput] = useState("");
   const [editFocalPointX, setEditFocalPointX] = useState(50);
   const [editFocalPointY, setEditFocalPointY] = useState(50);
   const [isEditCropDialogOpen, setIsEditCropDialogOpen] = useState(false);
@@ -522,6 +562,11 @@ const AdminAuthImagesPage = () => {
     return currentEditingImage?.imageUrl ?? null;
   }, [currentEditingImage?.imageUrl, editDirectImageUrl, editFilePreviewUrl]);
 
+  const nextDisplayOrder = useMemo(() => {
+    const items = imagesQuery.data?.items ?? [];
+    return items.reduce((maxOrder, image) => Math.max(maxOrder, image.displayOrder), 0) + 1;
+  }, [imagesQuery.data?.items]);
+
   const canOpenEditCropDialog = Boolean(isEditDialogOpen && editPreviewImageUrl);
 
   const revokePreviewUrl = (url?: string | null) => {
@@ -538,6 +583,7 @@ const AdminAuthImagesPage = () => {
     setDirectImageUrl("");
     setTitle("");
     setDescription("");
+    setDisplayOrderInput("");
     setFocalPointX(50);
     setFocalPointY(50);
     setIsCropDialogOpen(false);
@@ -550,6 +596,7 @@ const AdminAuthImagesPage = () => {
     setEditDirectImageUrl("");
     setEditTitle("");
     setEditDescription("");
+    setEditDisplayOrderInput("");
     setEditFocalPointX(50);
     setEditFocalPointY(50);
     setIsEditCropDialogOpen(false);
@@ -580,18 +627,21 @@ const AdminAuthImagesPage = () => {
     imageUrl,
     title,
     description,
+    displayOrderInput,
     focalPointX,
     focalPointY,
   }: {
     imageUrl: string;
     title: string;
     description: string;
+    displayOrderInput: string;
     focalPointX: number;
     focalPointY: number;
   }) => ({
     imageUrl,
     title: title.trim() || undefined,
     description: description.trim() || undefined,
+    displayOrder: parseDisplayOrderInput(displayOrderInput),
     focalPointX,
     focalPointY,
   });
@@ -605,6 +655,7 @@ const AdminAuthImagesPage = () => {
           imageUrl,
           title,
           description,
+          displayOrderInput,
           focalPointX,
           focalPointY,
         }),
@@ -640,6 +691,7 @@ const AdminAuthImagesPage = () => {
           imageUrl,
           title: editTitle,
           description: editDescription,
+          displayOrderInput: editDisplayOrderInput,
           focalPointX: editFocalPointX,
           focalPointY: editFocalPointY,
         }),
@@ -735,6 +787,7 @@ const AdminAuthImagesPage = () => {
     setEditDirectImageUrl(image.imageUrl);
     setEditTitle(image.title ?? "");
     setEditDescription(image.description ?? "");
+    setEditDisplayOrderInput(String(image.displayOrder));
     setEditFocalPointX(image.focalPointX);
     setEditFocalPointY(image.focalPointY);
     setEditingImageId(image.id);
@@ -852,6 +905,26 @@ const AdminAuthImagesPage = () => {
                         placeholder="Dòng mô tả sẽ phủ lên ảnh trong khung trái auth page"
                         className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
                       />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-white/70">
+                        Thứ tự xuất hiện trong slider
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={MAX_DISPLAY_ORDER}
+                        step={1}
+                        inputMode="numeric"
+                        value={editDisplayOrderInput}
+                        onChange={(event) => setEditDisplayOrderInput(event.target.value)}
+                        placeholder="Ví dụ: 1"
+                        className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
+                      />
+                      <p className="mt-2 text-xs leading-5 text-white/45">
+                        Số nhỏ hơn sẽ xuất hiện trước trong slider auth. Để trống, hệ thống giữ
+                        nguyên thứ tự hiện tại của ảnh này.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1007,6 +1080,26 @@ const AdminAuthImagesPage = () => {
                       className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
                     />
                   </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Thứ tự xuất hiện trong slider
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={MAX_DISPLAY_ORDER}
+                      step={1}
+                      inputMode="numeric"
+                      value={displayOrderInput}
+                      onChange={(event) => setDisplayOrderInput(event.target.value)}
+                      placeholder={String(nextDisplayOrder)}
+                      className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
+                    />
+                    <p className="mt-2 text-xs leading-5 text-white/45">
+                      Số nhỏ hơn sẽ xuất hiện trước. Để trống, ảnh mới sẽ tự thêm vào cuối slider
+                      hiện tại.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -1060,7 +1153,7 @@ const AdminAuthImagesPage = () => {
           <CardHeader>
             <CardTitle className="text-xl font-black text-white">Bộ ảnh hiện tại</CardTitle>
             <CardDescription className="text-white/55">
-              Ảnh mới nhất sẽ được ưu tiên xuất hiện trước trong slider của auth page.
+              Chọn số thứ tự để quyết định ảnh nào xuất hiện trước trong slider của auth page.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

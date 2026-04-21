@@ -158,6 +158,7 @@ export interface AuthPageImage {
   imageUrl: string;
   title?: string | null;
   description?: string | null;
+  displayOrder: number;
   focalPointX: number;
   focalPointY: number;
   createdAt: string;
