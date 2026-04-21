@@ -187,6 +187,17 @@ export const api = {
       body: payload,
       token,
     }),
+  reorderAdminAuthPageImages: (
+    token: string,
+    payload: {
+      imageIds: number[];
+    },
+  ) =>
+    request<AdminActionResponse>("/admin/auth-images/reorder", {
+      method: "PUT",
+      body: payload,
+      token,
+    }),
   deleteAdminAuthPageImage: (token: string, imageId: number | string) =>
     request<AdminActionResponse>(`/admin/auth-images/${imageId}`, {
       method: "DELETE",

@@ -1,4 +1,5 @@
 import {
+  type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -6,7 +7,7 @@ import {
   useState,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, ImagePlus, Pencil, Trash2, Upload } from "lucide-react";
+import { Eye, GripVertical, ImagePlus, ListOrdered, Pencil, Trash2, Upload } from "lucide-react";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { api } from "@/shared/lib/api";
 import type { AuthPageImage } from "@/shared/types/api";
@@ -42,7 +43,6 @@ const authPreviewFrameClass =
   "relative overflow-hidden rounded-[2px] border border-white/10 bg-[radial-gradient(circle_at_top,#1b2032_0%,#0a1020_42%,#040509_100%)]";
 const authPreviewOverlayClass =
   "pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,6,12,0.16)_0%,rgba(4,6,12,0.62)_56%,rgba(4,6,12,0.95)_100%)]";
-const MAX_DISPLAY_ORDER = 9999;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -65,20 +65,22 @@ const getTrimmedText = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
-const parseDisplayOrderInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
+const moveAuthImage = (
+  images: AuthPageImage[],
+  draggingImageId: number,
+  targetImageId: number,
+) => {
+  const fromIndex = images.findIndex((image) => image.id === draggingImageId);
+  const targetIndex = images.findIndex((image) => image.id === targetImageId);
 
-  if (!/^\d+$/.test(trimmed)) {
-    throw new Error(`Thứ tự xuất hiện phải là số nguyên từ 1 đến ${MAX_DISPLAY_ORDER}.`);
+  if (fromIndex === -1 || targetIndex === -1 || fromIndex === targetIndex) {
+    return images;
   }
 
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_DISPLAY_ORDER) {
-    throw new Error(`Thứ tự xuất hiện phải là số nguyên từ 1 đến ${MAX_DISPLAY_ORDER}.`);
-  }
-
-  return parsed;
+  const nextImages = [...images];
+  const [draggingImage] = nextImages.splice(fromIndex, 1);
+  nextImages.splice(targetIndex, 0, draggingImage);
+  return nextImages;
 };
 
 const AuthImagePreview = ({
@@ -423,6 +425,200 @@ const AuthImageCropDialog = ({
   );
 };
 
+const AuthImageOrderDialog = ({
+  open,
+  onOpenChange,
+  images,
+  saving,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  images: AuthPageImage[];
+  saving: boolean;
+  onSave: (imageIds: number[]) => void;
+}) => {
+  const [orderedImages, setOrderedImages] = useState<AuthPageImage[]>(images);
+  const [draggingImageId, setDraggingImageId] = useState<number | null>(null);
+  const [dropTargetImageId, setDropTargetImageId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setDraggingImageId(null);
+      setDropTargetImageId(null);
+      return;
+    }
+
+    setOrderedImages(images);
+    setDraggingImageId(null);
+    setDropTargetImageId(null);
+  }, [images, open]);
+
+  const hasOrderChanges = useMemo(
+    () =>
+      orderedImages.length === images.length &&
+      orderedImages.some((image, index) => image.id !== images[index]?.id),
+    [images, orderedImages],
+  );
+
+  const handleDragStart = (event: ReactDragEvent<HTMLDivElement>, imageId: number) => {
+    setDraggingImageId(imageId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(imageId));
+  };
+
+  const handleDragOver = (event: ReactDragEvent<HTMLDivElement>, targetImageId: number) => {
+    event.preventDefault();
+
+    if (draggingImageId == null || draggingImageId === targetImageId) {
+      return;
+    }
+
+    setDropTargetImageId(targetImageId);
+    setOrderedImages((current) => moveAuthImage(current, draggingImageId, targetImageId));
+  };
+
+  const handleDrop = (event: ReactDragEvent<HTMLDivElement>, targetImageId: number) => {
+    event.preventDefault();
+
+    if (draggingImageId != null) {
+      setOrderedImages((current) => moveAuthImage(current, draggingImageId, targetImageId));
+    }
+
+    setDraggingImageId(null);
+    setDropTargetImageId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingImageId(null);
+    setDropTargetImageId(null);
+  };
+
+  const heroImage = orderedImages[0] ?? null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(229,9,20,0.14),_transparent_42%),linear-gradient(180deg,rgba(12,12,16,0.98),rgba(8,8,12,0.98))] p-0 text-white shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
+        <div className="p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-white">
+              Sắp xếp thứ tự ảnh auth
+            </DialogTitle>
+            <DialogDescription className="text-white/70">
+              Kéo từng ảnh lên hoặc xuống để thay đổi vị trí xuất hiện trong slider của trang
+              đăng nhập và đăng ký.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="space-y-3">
+              <div className="max-h-[68vh] space-y-3 overflow-y-auto pr-1">
+                {orderedImages.map((image, index) => {
+                  const isDragging = draggingImageId === image.id;
+                  const isDropTarget = dropTargetImageId === image.id && draggingImageId !== image.id;
+
+                  return (
+                    <div
+                      key={image.id}
+                      draggable
+                      onDragStart={(event) => handleDragStart(event, image.id)}
+                      onDragOver={(event) => handleDragOver(event, image.id)}
+                      onDrop={(event) => handleDrop(event, image.id)}
+                      onDragEnd={handleDragEnd}
+                      className={`flex items-center gap-4 rounded-[24px] border p-3 transition ${
+                        isDropTarget
+                          ? "border-primary/70 bg-primary/12 shadow-[0_10px_30px_rgba(229,9,20,0.14)]"
+                          : "border-white/10 bg-white/[0.04]"
+                      } ${isDragging ? "cursor-grabbing opacity-45" : "cursor-grab"}`}
+                    >
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center gap-1 rounded-[20px] border border-white/10 bg-black/30 text-white/75">
+                        <GripVertical className="h-4 w-4" />
+                        <span className="text-sm font-black">{index + 1}</span>
+                      </div>
+                      <div className="h-16 w-24 shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-black/25">
+                        <img
+                          src={image.imageUrl}
+                          alt={image.title || "Auth image"}
+                          className="h-full w-full object-cover"
+                          style={{ objectPosition: `${image.focalPointX}% ${image.focalPointY}%` }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {getTrimmedText(image.title) || "Ảnh không có tiêu đề"}
+                        </p>
+                        <p className="line-clamp-2 text-xs leading-5 text-white/52">
+                          {getTrimmedText(image.description) || image.imageUrl}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-[28px] border border-white/10 bg-black/25 p-5">
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/45">Cách dùng</p>
+                <p className="text-sm leading-6 text-white/75">
+                  Giữ và kéo một ảnh tới vị trí mới. Ảnh ở vị trí số 1 sẽ xuất hiện đầu tiên
+                  khi người dùng mở trang auth.
+                </p>
+              </div>
+
+              <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/45">Ảnh mở đầu</p>
+                {heroImage ? (
+                  <div className="mt-3 space-y-3">
+                    <div className="overflow-hidden rounded-[18px] border border-white/10 bg-black/25">
+                      <img
+                        src={heroImage.imageUrl}
+                        alt={heroImage.title || "Auth hero image"}
+                        className="aspect-[4/3] w-full object-cover"
+                        style={{
+                          objectPosition: `${heroImage.focalPointX}% ${heroImage.focalPointY}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-white">
+                        {getTrimmedText(heroImage.title) || "Ảnh không có tiêu đề"}
+                      </p>
+                      <p className="text-xs leading-5 text-white/60">
+                        {getTrimmedText(heroImage.description) || "Ảnh này đang là slide đầu tiên."}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-white/60">Chưa có ảnh nào để sắp xếp.</p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  type="button"
+                  disabled={!hasOrderChanges || saving}
+                  onClick={() => onSave(orderedImages.map((image) => image.id))}
+                >
+                  {saving ? "Đang lưu thứ tự..." : "Lưu thứ tự mới"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenChange(false)}
+                  className="bg-white/[0.08] text-white hover:bg-white/[0.14]"
+                >
+                  Đóng
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const AuthImageCard = ({
   image,
   onEdit,
@@ -501,10 +697,10 @@ const AdminAuthImagesPage = () => {
   const [directImageUrl, setDirectImageUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [displayOrderInput, setDisplayOrderInput] = useState("");
   const [focalPointX, setFocalPointX] = useState(50);
   const [focalPointY, setFocalPointY] = useState(50);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [editingImageId, setEditingImageId] = useState<number | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
@@ -512,7 +708,6 @@ const AdminAuthImagesPage = () => {
   const [editDirectImageUrl, setEditDirectImageUrl] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editDisplayOrderInput, setEditDisplayOrderInput] = useState("");
   const [editFocalPointX, setEditFocalPointX] = useState(50);
   const [editFocalPointY, setEditFocalPointY] = useState(50);
   const [isEditCropDialogOpen, setIsEditCropDialogOpen] = useState(false);
@@ -562,11 +757,6 @@ const AdminAuthImagesPage = () => {
     return currentEditingImage?.imageUrl ?? null;
   }, [currentEditingImage?.imageUrl, editDirectImageUrl, editFilePreviewUrl]);
 
-  const nextDisplayOrder = useMemo(() => {
-    const items = imagesQuery.data?.items ?? [];
-    return items.reduce((maxOrder, image) => Math.max(maxOrder, image.displayOrder), 0) + 1;
-  }, [imagesQuery.data?.items]);
-
   const canOpenEditCropDialog = Boolean(isEditDialogOpen && editPreviewImageUrl);
 
   const revokePreviewUrl = (url?: string | null) => {
@@ -583,7 +773,6 @@ const AdminAuthImagesPage = () => {
     setDirectImageUrl("");
     setTitle("");
     setDescription("");
-    setDisplayOrderInput("");
     setFocalPointX(50);
     setFocalPointY(50);
     setIsCropDialogOpen(false);
@@ -596,7 +785,6 @@ const AdminAuthImagesPage = () => {
     setEditDirectImageUrl("");
     setEditTitle("");
     setEditDescription("");
-    setEditDisplayOrderInput("");
     setEditFocalPointX(50);
     setEditFocalPointY(50);
     setIsEditCropDialogOpen(false);
@@ -627,21 +815,18 @@ const AdminAuthImagesPage = () => {
     imageUrl,
     title,
     description,
-    displayOrderInput,
     focalPointX,
     focalPointY,
   }: {
     imageUrl: string;
     title: string;
     description: string;
-    displayOrderInput: string;
     focalPointX: number;
     focalPointY: number;
   }) => ({
     imageUrl,
     title: title.trim() || undefined,
     description: description.trim() || undefined,
-    displayOrder: parseDisplayOrderInput(displayOrderInput),
     focalPointX,
     focalPointY,
   });
@@ -655,7 +840,6 @@ const AdminAuthImagesPage = () => {
           imageUrl,
           title,
           description,
-          displayOrderInput,
           focalPointX,
           focalPointY,
         }),
@@ -691,7 +875,6 @@ const AdminAuthImagesPage = () => {
           imageUrl,
           title: editTitle,
           description: editDescription,
-          displayOrderInput: editDisplayOrderInput,
           focalPointX: editFocalPointX,
           focalPointY: editFocalPointY,
         }),
@@ -705,6 +888,22 @@ const AdminAuthImagesPage = () => {
         type: "success",
         text: "Đã cập nhật ảnh auth page.",
       });
+    },
+    onError: (error) =>
+      setFeedback({
+        type: "error",
+        text: (error as Error).message,
+      }),
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: (imageIds: number[]) =>
+      api.reorderAdminAuthPageImages(token as string, { imageIds }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-auth-images"] });
+      queryClient.invalidateQueries({ queryKey: ["auth-page-images"] });
+      setIsOrderDialogOpen(false);
+      setFeedback({ type: "success", text: data.message });
     },
     onError: (error) =>
       setFeedback({
@@ -787,7 +986,6 @@ const AdminAuthImagesPage = () => {
     setEditDirectImageUrl(image.imageUrl);
     setEditTitle(image.title ?? "");
     setEditDescription(image.description ?? "");
-    setEditDisplayOrderInput(String(image.displayOrder));
     setEditFocalPointX(image.focalPointX);
     setEditFocalPointY(image.focalPointY);
     setEditingImageId(image.id);
@@ -806,6 +1004,7 @@ const AdminAuthImagesPage = () => {
   };
 
   const isCreating = createMutation.isPending;
+  const isOrdering = reorderMutation.isPending;
   const isUpdating = updateMutation.isPending;
 
   return (
@@ -842,6 +1041,17 @@ const AdminAuthImagesPage = () => {
         }}
       />
 
+      <AuthImageOrderDialog
+        open={isOrderDialogOpen}
+        onOpenChange={setIsOrderDialogOpen}
+        images={imagesQuery.data?.items ?? []}
+        saving={isOrdering}
+        onSave={(imageIds) => {
+          setFeedback(null);
+          reorderMutation.mutate(imageIds);
+        }}
+      />
+
       <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogOpenChange}>
         <DialogContent className="max-w-6xl border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(229,9,20,0.14),_transparent_42%),linear-gradient(180deg,rgba(12,12,16,0.98),rgba(8,8,12,0.98))] p-0 text-white shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
           <div className="p-6">
@@ -849,6 +1059,7 @@ const AdminAuthImagesPage = () => {
               <DialogTitle className="text-2xl font-black text-white">Sửa ảnh auth</DialogTitle>
               <DialogDescription className="text-white/70">
                 Cập nhật ảnh, nội dung hiển thị và vị trí khung preview ngay trong popup này.
+                Thứ tự slider được quản lý riêng trong popup sắp xếp.
               </DialogDescription>
             </DialogHeader>
 
@@ -906,25 +1117,9 @@ const AdminAuthImagesPage = () => {
                         className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
                       />
                     </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-white/70">
-                        Thứ tự xuất hiện trong slider
-                      </label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={MAX_DISPLAY_ORDER}
-                        step={1}
-                        inputMode="numeric"
-                        value={editDisplayOrderInput}
-                        onChange={(event) => setEditDisplayOrderInput(event.target.value)}
-                        placeholder="Ví dụ: 1"
-                        className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
-                      />
-                      <p className="mt-2 text-xs leading-5 text-white/45">
-                        Số nhỏ hơn sẽ xuất hiện trước trong slider auth. Để trống, hệ thống giữ
-                        nguyên thứ tự hiện tại của ảnh này.
-                      </p>
+                    <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-white/68">
+                      Thứ tự slider được đổi trong popup <span className="font-semibold text-white">Sắp xếp thứ tự</span>
+                      {" "}ở phần Bộ ảnh hiện tại để tránh nhập số bị trùng hoặc lệch vị trí.
                     </div>
                   </div>
                 </div>
@@ -1019,7 +1214,8 @@ const AdminAuthImagesPage = () => {
               Thêm ảnh mới
             </CardTitle>
             <CardDescription className="text-white/55">
-              Tải ảnh lên hoặc dán URL, sau đó canh preview ngay trong cùng khung này.
+              Tải ảnh lên hoặc dán URL, sau đó canh preview ngay trong cùng khung này. Ảnh mới
+              sẽ tự nằm cuối slider cho tới khi bạn kéo đổi vị trí.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 xl:grid-cols-[minmax(360px,0.98fr)_minmax(320px,0.9fr)]">
@@ -1080,25 +1276,9 @@ const AdminAuthImagesPage = () => {
                       className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
                     />
                   </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Thứ tự xuất hiện trong slider
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={MAX_DISPLAY_ORDER}
-                      step={1}
-                      inputMode="numeric"
-                      value={displayOrderInput}
-                      onChange={(event) => setDisplayOrderInput(event.target.value)}
-                      placeholder={String(nextDisplayOrder)}
-                      className="border-white/10 bg-white/[0.04] text-white placeholder:text-white/35"
-                    />
-                    <p className="mt-2 text-xs leading-5 text-white/45">
-                      Số nhỏ hơn sẽ xuất hiện trước. Để trống, ảnh mới sẽ tự thêm vào cuối slider
-                      hiện tại.
-                    </p>
+                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-white/68">
+                    Ảnh mới sẽ tự thêm vào cuối slider. Nếu muốn đổi vị trí xuất hiện, dùng popup
+                    <span className="font-semibold text-white"> Sắp xếp thứ tự</span> trong phần Bộ ảnh hiện tại.
                   </div>
                 </div>
               </div>
@@ -1151,10 +1331,24 @@ const AdminAuthImagesPage = () => {
 
         <Card className="rounded-[32px] border-white/10 bg-white/[0.04] text-white">
           <CardHeader>
-            <CardTitle className="text-xl font-black text-white">Bộ ảnh hiện tại</CardTitle>
-            <CardDescription className="text-white/55">
-              Chọn số thứ tự để quyết định ảnh nào xuất hiện trước trong slider của auth page.
-            </CardDescription>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-xl font-black text-white">Bộ ảnh hiện tại</CardTitle>
+                <CardDescription className="text-white/55">
+                  Mở popup kéo-thả để thay đổi vị trí xuất hiện của ảnh trong slider auth page.
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={(imagesQuery.data?.items.length ?? 0) <= 1 || isOrdering}
+                onClick={() => setIsOrderDialogOpen(true)}
+                className="bg-white/[0.08] text-white hover:bg-white/[0.14]"
+              >
+                <ListOrdered className="h-4 w-4" />
+                {isOrdering ? "Đang lưu thứ tự..." : "Sắp xếp thứ tự"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {imagesQuery.data?.items.length ? (
