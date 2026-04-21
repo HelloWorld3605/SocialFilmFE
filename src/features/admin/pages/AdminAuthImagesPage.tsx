@@ -631,47 +631,57 @@ const AuthImageCard = ({
   onDelete: (image: AuthPageImage) => void;
   editing: boolean;
   deleting: boolean;
-}) => (
-  <div className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04]">
-    <div className="aspect-[4/3] bg-black/20">
-      <img
-        src={image.imageUrl}
-        alt={image.title || "Auth image"}
-        className="h-full w-full object-cover"
-        style={{ objectPosition: `${image.focalPointX}% ${image.focalPointY}%` }}
-      />
-    </div>
-    <div className="space-y-3 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          {getTrimmedText(image.title) ? (
-            <p className="line-clamp-1 text-sm font-semibold text-white">{getTrimmedText(image.title)}</p>
-          ) : null}
-          {getTrimmedText(image.description) ? (
-            <p className="line-clamp-2 min-h-10 text-xs leading-5 text-white/55">
-              {getTrimmedText(image.description)}
-            </p>
-          ) : null}
-          <p className="text-[11px] text-white/40">
-            Vị trí ảnh: ngang {image.focalPointX}% • dọc {image.focalPointY}%
+}) => {
+  const trimmedTitle = getTrimmedText(image.title) || "Ảnh auth chưa có tiêu đề";
+  const trimmedDescription =
+    getTrimmedText(image.description) || "Chưa có mô tả cho slide này.";
+
+  return (
+    <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(229,9,20,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+      <div className="relative aspect-[4/3] overflow-hidden bg-black/20">
+        <img
+          src={image.imageUrl}
+          alt={image.title || "Auth image"}
+          className="h-full w-full object-cover"
+          style={{ objectPosition: `${image.focalPointX}% ${image.focalPointY}%` }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,8,15,0.06)_0%,rgba(6,8,15,0.22)_36%,rgba(6,8,15,0.92)_100%)]" />
+        <div className="absolute inset-x-0 top-0 p-4">
+          <div className="inline-flex rounded-full border border-white/16 bg-black/45 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+            #{image.displayOrder}
+          </div>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 space-y-2 p-4">
+          <p className="max-w-[85%] text-lg font-black leading-tight text-white">{trimmedTitle}</p>
+          <p className="line-clamp-2 max-w-[92%] text-xs leading-5 text-white/72">
+            {trimmedDescription}
           </p>
         </div>
-        <div className="shrink-0 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/78">
-          #{image.displayOrder}
-        </div>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] text-white/40">{formatDateTime(image.createdAt)}</p>
-        <div className="flex items-center gap-2">
+
+      <div className="space-y-4 p-4">
+        <div className="flex flex-wrap gap-2 text-[11px] text-white/42">
+          <div className="rounded-full border border-white/8 bg-black/15 px-3 py-1.5">
+            Thêm: <span className="text-white/58">{formatDateTime(image.createdAt)}</span>
+          </div>
+          <div className="rounded-full border border-white/8 bg-black/15 px-3 py-1.5">
+            Ngang: <span className="text-white/58">{image.focalPointX}%</span>
+          </div>
+          <div className="rounded-full border border-white/8 bg-black/15 px-3 py-1.5">
+            Dọc: <span className="text-white/58">{image.focalPointY}%</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={() => onEdit(image)}
-            className="bg-white/[0.08] text-white hover:bg-white/[0.14]"
+            className="min-w-[120px] flex-1 bg-white/[0.08] text-white hover:bg-white/[0.14]"
           >
             <Pencil className="h-4 w-4" />
-            {editing ? "Đang sửa" : "Sửa"}
+            {editing ? "Đang sửa" : "Sửa nội dung"}
           </Button>
           <Button
             type="button"
@@ -679,15 +689,16 @@ const AuthImageCard = ({
             size="sm"
             disabled={deleting}
             onClick={() => onDelete(image)}
+            className="min-w-[120px] flex-1"
           >
             <Trash2 className="h-4 w-4" />
-            {deleting ? "Đang xóa..." : "Xóa"}
+            {deleting ? "Đang xóa..." : "Xóa ảnh"}
           </Button>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AdminAuthImagesPage = () => {
   const { token } = useAuth();
